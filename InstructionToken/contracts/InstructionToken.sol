@@ -7,12 +7,12 @@ import "./Ownable.sol";
 
 
 /**
- * @title Standard ERC20 token
+ * @title Instruction Token
  * @author Benjamin Rickenbacher, benjamin@alethena.com
  * @dev This is the "instruction token" based on the ERC20 standard and the open zeppelin library.
- * @dev The main addition is a functionality that allows the user to claim that the key for a certain address is lost.
- * @dev In order to prevent malicious attempts, a collateral needs to be posted.
- * @dev The contract owner can delete claims in case of disputes.
+ * @notice The main addition is a functionality that allows the user to claim that the key for a certain address is lost.
+ * @notice In order to prevent malicious attempts, a collateral needs to be posted.
+ * @notice The contract owner can delete claims in case of disputes.
  * 
  * https://github.com/ethereum/EIPs/issues/20
  * Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
@@ -25,19 +25,29 @@ contract InstructionToken is ERC20, Ownable {
 
     uint256 totalSupply_;
 
-  // @param collateralRate Sets the "exchange rate" for declaring addresses lost   
-    
+    /**
+  * @dev Total number of tokens in existence
+  */
+    function totalSupply() public view returns (uint256) {
+        return totalSupply_;
+    }
+
+
+  /** 
+  * @param collateralRate 
+  Sets the "exchange rate" for declaring addresses lost   */
     uint256 collateralRate = 1 ether;
 
   /** This contract is pausible.  */
-
     bool public isPaused = false;
+
+  /** @dev In case the contract is paused, the pauseMessage can be used to give information. */
     bytes32 public pauseMessage = "Contract is active";
+
     event Pause();
     event Unpause();
 
   /** @dev Function to set pause.  */
-
     function pause(bytes32 _inputMessage) public onlyOwner() returns (bool) {
         isPaused = true;
         pauseMessage = _inputMessage;
@@ -45,18 +55,14 @@ contract InstructionToken is ERC20, Ownable {
         return true;
     }
 
+/** 
+* @dev Function to unpause.  
+*/
     function unpause() public onlyOwner() returns (bool) {
         isPaused = false;
         pauseMessage = "Contract is active";
         emit Unpause();
         return true;
-    }
-
-  /**
-  * @dev Total number of tokens in existence
-  */
-    function totalSupply() public view returns (uint256) {
-        return totalSupply_;
     }
 
   /**
@@ -198,24 +204,36 @@ contract InstructionToken is ERC20, Ownable {
         return true;
     }
   
-  ////////////////////////////////////
+  /** 
+   * @dev This is a temporary minting function.
+   */
   
     function mint(address _receiver, uint _amount) public onlyOwner() returns (bool){
         require(!isPaused);
         balances[_receiver] = balances[_receiver].add(_amount);
+        totalSupply_ = totalSupply_.add(_amount);
         return true;
     }
   
      
-  /** First address is for the address that is being claimed.
-      Second address is the  user who makes the claim 
-      The uint stores the locking period for a specific address pair */
+  /** @dev First address is for the address that is being claimed.
+    * @dev Second address is the  user who makes the claim 
+    * @dev The uint stores the locking period for a specific address pair 
+    */
 
-    mapping(address => mapping(address => uint256)) claims; 
-    mapping(address => address[]) indices;
+    mapping(address => mapping(address => uint256)) public claims; 
+    mapping(address => address[]) public indices;
+
+    // This stores the total collateral for a certain target address
+    mapping(address => uint256) collaterals;
 
     event ClaimMade(address indexed _lostAddress, address indexed _claimer, uint256 _lockTime);
     event ClaimDeleted(address indexed _lostAddress, address indexed _claimer);
+
+  /** 
+    * @dev Getters for claims. Since keys cannot be deleted, they will be shown by showAllClaims() even if the claim was deleted.
+    * @dev To check specific claim use showClaim()
+    */
 
     function showClaim(address _claimedAddress, address _claimerAddress) public view returns (uint256){
         return claims[_claimedAddress][_claimerAddress];
@@ -229,12 +247,11 @@ contract InstructionToken is ERC20, Ownable {
         return collaterals[_claimedAddress];
     }
 
-   // This stores the total collateral for a certain target address
-    mapping(address => uint256) collaterals;
+   
   
   /** @dev Anyone can declare that the private key to a certain address was lost by 
-    * calling declareLost and passing the address in question. To prevent random requests
-    * a high collateral needs to be posted.
+    * @dev calling declareLost and passing the address in question. To prevent random requests
+    * @dev a high collateral needs to be posted.
     */
     function declareLost (address _lostAddress) public payable returns (bool){
         require(!isPaused);
@@ -245,8 +262,12 @@ contract InstructionToken is ERC20, Ownable {
         emit ClaimMade(_lostAddress, msg.sender, claims[_lostAddress][msg.sender]);
     }
     
-//    /** @dev Can claim the collateral if key is not lost
-//     */
+   /** 
+    * @dev This function is used to resolve a claim.
+    * @dev A rightful owner can claim his address back.
+    * @dev Else, after waiting period address can be claimed.
+    * 
+   */
     function resolveClaim(address _addressToBeResolved) public returns (bool){
         require(!isPaused);
         if (msg.sender == _addressToBeResolved){
@@ -256,7 +277,7 @@ contract InstructionToken is ERC20, Ownable {
             deleteAllClaims(_addressToBeResolved);
             return true;
         }
-        
+
         else{
             // Check the sender actually has a claim
             require(claims[_addressToBeResolved][msg.sender] != 0);
@@ -274,7 +295,6 @@ contract InstructionToken is ERC20, Ownable {
 
             emit Transfer(_addressToBeResolved, msg.sender, balances[_addressToBeResolved]);
         
-    
           //DELETE ALL CLAIMS FOR THIS ADDRESS
             deleteAllClaims(_addressToBeResolved);
             return true;
@@ -282,15 +302,19 @@ contract InstructionToken is ERC20, Ownable {
         return false;
     }
 
-    
-//     /** @dev Can claim the tokens if key is really lost
-//     */
+    /** 
+     * @dev This function is to be executed by the owener only in case a legal dispute needs to be settled. 
+     */
+
     function deleteClaim(address _lostAddress, address _claimerAddress) public onlyOwner() returns (bool){
         claims[_lostAddress][_claimerAddress] = 0;
         emit ClaimDeleted(_lostAddress, _claimerAddress);
         return true;
     }
 
+    /** 
+      * @dev This function is used to remove all claims on an address after claims have been resolved. 
+      */
     function deleteAllClaims(address _lostAddress) private returns (bool){
 
         uint arrayLength = indices[_lostAddress].length;
