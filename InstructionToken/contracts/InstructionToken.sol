@@ -32,11 +32,32 @@ contract InstructionToken is ERC20, Ownable {
         return totalSupply_;
     }
 
+    /**
+  * @dev Flag that indicates that minting is possible.
+  */
+    bool public mintable = true;
+    event mintingDone();
+
+        /**
+  * @dev Function to prevent any future minting.
+  */
+    function endMinting() public onlyOwner() returns (bool){
+        mintable = false;
+        emit mintingDone();
+    }
+
 
   /** 
   * @param collateralRate 
   Sets the "exchange rate" for declaring addresses lost   */
-    uint256 collateralRate = 1 ether;
+    uint256 collateralRate = 10**18 wei;
+
+    event CollateralRateChanged();
+
+    function setCollateralRate(uint256 _collateralRate) public onlyOwner() returns (bool){
+        collateralRate = _collateralRate;
+        emit CollateralRateChanged();
+    }
 
   /** This contract is pausible.  */
     bool public isPaused = false;
@@ -204,14 +225,27 @@ contract InstructionToken is ERC20, Ownable {
         return true;
     }
   
+ 
+    event Mint(address _receiver,uint256 _amount);
+
   /** 
-   * @dev This is a temporary minting function.
+   *  This is the minting function used to distribute the tokens initially
+   *  Once the minting is done, any future minting can be prevented by irrevocably setting 
+   *  the mintable variable to "false".
    */
-  
-    function mint(address _receiver, uint _amount) public onlyOwner() returns (bool){
+    function mint(address[] _receivers, uint256[] _amounts) 
+    public 
+    onlyOwner() 
+    returns (bool){
         require(!isPaused);
-        balances[_receiver] = balances[_receiver].add(_amount);
-        totalSupply_ = totalSupply_.add(_amount);
+        require(mintable);
+        require(_receivers.length == _amounts.length);
+
+        for (uint256 i = 0; i < _receivers.length; i++){
+            totalSupply_ = totalSupply_.add(_amounts[i]);
+            balances[_receivers[i]] = balances[_receivers[i]].add(_amounts[i]);
+            emit Mint(_receivers[i], _amounts[i]);
+        }
         return true;
     }
   
