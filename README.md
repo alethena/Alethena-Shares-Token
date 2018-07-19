@@ -1,5 +1,5 @@
-# InstructionToken
-This is the instruction token, an ERC20 token intended to make shares tradeable on the blockchain.
+# Instruction-Token
+This is the Instruction-Token, an ERC20 token intended to make shares tradeable on the blockchain.
 
 -----------------------------------------------------------------------------------------------
 
