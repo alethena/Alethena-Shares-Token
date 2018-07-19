@@ -1,10 +1,20 @@
 truffle compile
 truffle migrate
+
+(To deploy on rinkeby, use truffle migrate --reset --compile-all --network rinkeby)
+
 truffle console
 
 var IT;
 InstructionToken.deployed().then(function(instance){IT=instance});
 IT.mint([web3.eth.accounts[0], web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[3], web3.eth.accounts[4]], [5,5,5,5,5]);
+
+(on rinkeby use var InstructionToken = web3.eth.contract(abiArray);
+where for abiArray the "[]" needs to be included
+> var contractAddress = '0x9b2f0f75c7a8bb62e566ec4cd473d0b55fd460b2'
+> var IT = MyContract.at(contractAddress)
+Then go ahead as usual
+)
 
 IT.endMinting()
 

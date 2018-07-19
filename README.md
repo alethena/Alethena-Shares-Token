@@ -7,6 +7,9 @@ Try the following commands in your terminal
 
 truffle compile
 truffle migrate
+
+(To deploy on rinkeby, use truffle migrate --reset --compile-all --network rinkeby)
+(deployed on rinkeby @ "0x9b2f0f75c7a8bb62e566ec4cd473d0b55fd460b2")
 truffle console
 
 var IT;
