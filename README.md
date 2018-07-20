@@ -2,19 +2,19 @@
 This is the Instruction-Token, an ERC20 token intended to make shares tradeable on the blockchain.
 
 -----------------------------------------------------------------------------------------------
+TRUFFLE/GANACHE
 
 Try the following commands in your terminal
 
 truffle compile
 truffle migrate
-
-(To deploy on rinkeby, use truffle migrate --reset --compile-all --network rinkeby)
-(deployed on rinkeby @ "0x9b2f0f75c7a8bb62e566ec4cd473d0b55fd460b2")
 truffle console
 
 var IT;
 InstructionToken.deployed().then(function(instance){IT=instance});
-IT.mint([web3.eth.accounts[0], web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[3], web3.eth.accounts[4]], [5,5,5,5,5]);
+
+IT.mint([web3.eth.accounts[0], web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[3], web3.eth.accounts[4]], [5,5,5,5,5];
+
 
 IT.endMinting()
 
@@ -44,3 +44,16 @@ IT.setCollateralRate(3*10**18)
 IT.declareLost(web3.eth.accounts[0], {from: web3.eth.accounts[7], value: web3.toWei(15)});  
 
 IT.declareLost(web3.eth.accounts[0], {from: web3.eth.accounts[6], value: web3.toWei(14)});  
+
+
+------------------------------------------------
+RINKEBY:
+
+To deploy on rinkeby, use truffle migrate --reset --compile-all --network rinkeby
+
+on rinkeby use var InstructionToken = web3.eth.contract(abiArray
+where for abiArray the "[]" needs to be included
+> var contractAddress = '0x9b2f0f75c7a8bb62e566ec4cd473d0b55fd460b2'
+> var IT = MyContract.at(contractAddress)
+
+Create and unlock user accounts, then go ahead as usual)
