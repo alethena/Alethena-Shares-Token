@@ -9,7 +9,7 @@ import "./Ownable.sol";
 /**
  * @title Instruction Token
  * @author Benjamin Rickenbacher, benjamin@alethena.com
- * @dev This is the "instruction token" based on the ERC20 standard and the open zeppelin library.
+ * @dev This is the "instruction token" based on the ERC20 standard and the open-zeppelin library.
  * @notice The main addition is a functionality that allows the user to claim that the key for a certain address is lost.
  * @notice In order to prevent malicious attempts, a collateral needs to be posted.
  * @notice The contract owner can delete claims in case of disputes.
@@ -22,36 +22,43 @@ contract InstructionToken is ERC20, Ownable {
     using SafeMath for uint256;
 
     mapping(address => uint256) balances;
-
     uint256 totalSupply_;
+    uint256 maxSupply_  = 1000;
 
-    /**
-  * @dev Total number of tokens in existence
-  */
+    
+  /** @dev Total number of tokens in existence */
+  
     function totalSupply() public view returns (uint256) {
         return totalSupply_;
     }
+        
+  /** @dev Upper limit enforced in minting function */
 
-    /**
-  * @dev Flag that indicates that minting is possible.
-  */
+    function maxSupply() public view returns (uint256) {
+        return maxSupply_;
+    }
+
+  /** @dev Set the limit. Used for example in case of capital increase */
+  
+    function setSupply(uint256 _newMaxSupply) public onlyOwner() returns(bool){
+        maxSupply_ = _newMaxSupply;
+    }
+
+  /** @dev Flag that indicates that minting is possible */
+
     bool public mintable = true;
     event mintingDone();
 
-        /**
-  * @dev Function to prevent any future minting.
-  */
+  /** @dev Function to prevent any future minting. Cannot be undone! */
+
     function endMinting() public onlyOwner() returns (bool){
         mintable = false;
         emit mintingDone();
     }
 
+  /** @param collateralRate Sets the "exchange rate" for declaring addresses lost */
 
-  /** 
-  * @param collateralRate 
-  Sets the "exchange rate" for declaring addresses lost   */
     uint256 collateralRate = 10**18 wei;
-
     event CollateralRateChanged();
 
     function setCollateralRate(uint256 _collateralRate) public onlyOwner() returns (bool){
@@ -63,13 +70,20 @@ contract InstructionToken is ERC20, Ownable {
     bool public isPaused = false;
 
   /** @dev In case the contract is paused, the pauseMessage can be used to give information. */
-    bytes32 public pauseMessage = "Contract is active";
+    string public pauseMessage = "Contract is active";
 
-    event Pause();
-    event Unpause();
+  /** @dev Give URL where the legal documents supporting the token can be found.
+      Does this need to be hashed??? */
+    string public TermsAndConditions = "www.alethena.com";
 
+    function setTC(string _TermsAndConditions) public onlyOwner() returns (bool){
+        TermsAndConditions = _TermsAndConditions;
+        emit TCChanged();
+    }
+
+   
   /** @dev Function to set pause.  */
-    function pause(bytes32 _inputMessage) public onlyOwner() returns (bool) {
+    function pause(string _inputMessage) public onlyOwner() returns (bool) {
         isPaused = true;
         pauseMessage = _inputMessage;
         emit Pause();
@@ -85,6 +99,17 @@ contract InstructionToken is ERC20, Ownable {
         emit Unpause();
         return true;
     }
+
+    event Pause();
+    event Unpause();
+    event TCChanged();
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** 
+The next section contains standard ERC20 routines.
+Main change: Transfer functions have an additional post function which resolves claims if applicable.
+ */
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
   * @dev Transfer token for a specified address
@@ -225,6 +250,8 @@ contract InstructionToken is ERC20, Ownable {
         return true;
     }
   
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
     event Mint(address _receiver,uint256 _amount);
 
@@ -232,6 +259,7 @@ contract InstructionToken is ERC20, Ownable {
    *  This is the minting function used to distribute the tokens initially
    *  Once the minting is done, any future minting can be prevented by irrevocably setting 
    *  the mintable variable to "false".
+   *  @notice We will need an additional minting function which should be callable from the "Aktienautomat" only.
    */
     function mint(address[] _receivers, uint256[] _amounts) 
     public 
@@ -243,6 +271,7 @@ contract InstructionToken is ERC20, Ownable {
 
         for (uint256 i = 0; i < _receivers.length; i++){
             totalSupply_ = totalSupply_.add(_amounts[i]);
+            require(totalSupply_ <= maxSupply_);
             balances[_receivers[i]] = balances[_receivers[i]].add(_amounts[i]);
             emit Mint(_receivers[i], _amounts[i]);
         }
@@ -286,6 +315,7 @@ contract InstructionToken is ERC20, Ownable {
   /** @dev Anyone can declare that the private key to a certain address was lost by 
     * @dev calling declareLost and passing the address in question. To prevent random requests
     * @dev a high collateral needs to be posted.
+    * @dev Using block timestamps is ok as we will replace 1 minute by something like 1 year.
     */
     function declareLost (address _lostAddress) public payable returns (bool){
         require(!isPaused);
@@ -322,11 +352,9 @@ contract InstructionToken is ERC20, Ownable {
            //pay claimer
             msg.sender.transfer(collaterals[_addressToBeResolved]);
             
-           //...and give him the tokens
-                        
+           //...and give him the tokens         
             balances[msg.sender] = balances[msg.sender].add(balances[_addressToBeResolved]);
             balances[_addressToBeResolved] = 0;
-
             emit Transfer(_addressToBeResolved, msg.sender, balances[_addressToBeResolved]);
         
           //DELETE ALL CLAIMS FOR THIS ADDRESS
@@ -336,19 +364,17 @@ contract InstructionToken is ERC20, Ownable {
         return false;
     }
 
-    /** 
-     * @dev This function is to be executed by the owener only in case a legal dispute needs to be settled. 
-     */
 
+     /** @dev This function is to be executed by the owener only in case a legal dispute needs to be settled */
+     
     function deleteClaim(address _lostAddress, address _claimerAddress) public onlyOwner() returns (bool){
         claims[_lostAddress][_claimerAddress] = 0;
         emit ClaimDeleted(_lostAddress, _claimerAddress);
         return true;
     }
 
-    /** 
-      * @dev This function is used to remove all claims on an address after claims have been resolved. 
-      */
+      /** @dev This function is used to remove all claims on an address after claims have been resolved. */
+
     function deleteAllClaims(address _lostAddress) private returns (bool){
 
         uint arrayLength = indices[_lostAddress].length;

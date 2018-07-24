@@ -1,10 +1,12 @@
 # Instruction-Token
 This is the Instruction-Token, an ERC20 token intended to make shares tradeable on the blockchain.
+It is based on the open-zeppelin library.
+
 
 -----------------------------------------------------------------------------------------------
 TRUFFLE/GANACHE
 
-Try the following commands in your terminal
+For testing purposes, try the following commands in your terminal
 
 truffle compile
 truffle migrate
@@ -51,9 +53,17 @@ RINKEBY:
 
 To deploy on rinkeby, use truffle migrate --reset --compile-all --network rinkeby
 
-on rinkeby use var InstructionToken = web3.eth.contract(abiArray
-where for abiArray the "[]" needs to be included
+To interact with contract:
+The version currently deployed on rinkeby misses some minor funcionality.
+
+geth console --rinkeby
+
+on rinkeby use var InstructionToken = web3.eth.contract(abiArray)
+where for abiArray the "[]" needs to be included (see ABICopy file)
+
 > var contractAddress = '0x9b2f0f75c7a8bb62e566ec4cd473d0b55fd460b2'
 > var IT = MyContract.at(contractAddress)
 
-Create and unlock user accounts, then go ahead as usual)
+Create and unlock user accounts, then go ahead as usual
+
+The ABI tells you what functions are available and how to use them.
