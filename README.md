@@ -66,4 +66,4 @@ where for abiArray the "[]" needs to be included (see ABICopy file)
 
 Create and unlock user accounts, then go ahead as usual
 
-The ABI tells you what functions are available and how to use them.
+The ABI tells you what functions are available and how to use them. 
