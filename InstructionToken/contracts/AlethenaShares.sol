@@ -91,16 +91,13 @@ contract AlethenaShares is ERC20, Ownable {
     uint256 collateralRate = 10**18 wei;
     event CollateralRateChanged();
 
-    function setCollateralRate(uint256 _collateralRate) public onlyOwner() returns (bool){
+    function setCollateralRate(uint256 _collateralRate) public onlyOwner() {
         collateralRate = _collateralRate;
         emit CollateralRateChanged();
     }
 
   /** This contract is pausible.  */
     bool public isPaused = false;
-
-  /** @dev In case the contract is paused, the pauseMessage can be used to give information. */
-    string public pauseMessage = "Contract is active";
 
   /** @dev Give URL where the legal documents supporting the token can be found.
       Does this need to be hashed??? */
@@ -113,10 +110,9 @@ contract AlethenaShares is ERC20, Ownable {
 
    
   /** @dev Function to set pause.  */
-    function pause(string _inputMessage) public onlyOwner() returns (bool) {
+    function pause(string _message) public onlyOwner() returns (bool) {
         isPaused = true;
-        pauseMessage = _inputMessage;
-        emit Pause();
+        emit Pause(_message);
         return true;
     }
 
@@ -125,12 +121,11 @@ contract AlethenaShares is ERC20, Ownable {
 */
     function unpause() public onlyOwner() returns (bool) {
         isPaused = false;
-        pauseMessage = "Contract is active";
         emit Unpause();
         return true;
     }
 
-    event Pause();
+    event Pause(string message);
     event Unpause();
     event TCChanged();
 
@@ -282,16 +277,11 @@ Main change: Transfer functions have an additional post function which resolves 
   
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
      
-  /** @dev First address is for the address that is being claimed.
-    * @dev Second address is the  user who makes the claim 
-    * @dev The uint stores the locking period for a specific address pair 
-    */
-
-    mapping(address => mapping(address => uint256)) public claims; 
-    mapping(address => address[]) public indices;
-
-    // This stores the total collateral for a certain target address
-    mapping(address => uint256) collaterals;
+    struct Claim {
+        address owner; // the person who created the claim
+        uint256 collateral; // the amount of wei deposited
+        uint timestamp;  // the block in which the claim was created
+    }
 
     event ClaimMade(address indexed _lostAddress, address indexed _claimer, uint256 _lockTime);
     event ClaimDeleted(address indexed _lostAddress, address indexed _claimer);
