@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "./ERC20Basic.sol";
 import "./SafeMath.sol";
 import "./ERC20.sol";
-import "./Ownable.sol";
+import "./Claimable.sol";
 
 
 /**
@@ -30,19 +30,21 @@ import "./Ownable.sol";
  * https://github.com/ethereum/EIPs/issues/20
  * Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
  */
-contract AlethenaShares is ERC20, Ownable {
+contract AlethenaShares is ERC20, Claimable {
 
     using SafeMath for uint256;
+
+      /** URL where the source code as well as the terms and conditions can be found. */
+    string public constant termsAndConditions = "shares.alethena.com";
 
     mapping(address => uint256) balances;
     uint256 totalSupply_;        // total number of tokenized shares, sum of all balances
     uint256 totalShares_ = 1000; // total number of outstanding shares, maybe not all tokenized
 
-    event Mint(address shareholder, uint256 currentTokens, uint256 currentShares, string message);
-    event Unmint(uint256 currentTokens, uint256 currentShares, string message);
+    event Mint(address shareholder, uint256 amount, string message);
+    event Unmint(uint256 amount, string message);
 
   /** @dev Total number of tokens in existence */
-  
     function totalSupply() public view returns (uint256) {
         return totalSupply_;
     }
@@ -54,15 +56,18 @@ contract AlethenaShares is ERC20, Ownable {
         return totalShares_;
     }
 
-  /** @dev Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */
-    function mint(address shareholder, uint256 _newMaxSupply, uint256 _newTotalShares, string _message) public onlyOwner() {
-        require(_newMaxSupply <= _newTotalShares);
-        require(_newMaxSupply >= maxSupply_);
-        uint256 minted = _maxSupply - _newMaxSupply;
-        balances[shareholder] = balances[shareholder].add(minted);
-        maxSupply_ = _newMaxSupply;
+    function setTotalShares(uint256 _newTotalShares) public onlyOwner() {
+        require(_newTotalShares >= totalSupply());
         totalShares_ = _newTotalShares;
-        emit Mint(shareholder, maxSupply_, totalShares_, _message);
+    }
+
+  /** @dev Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */
+    function mint(address shareholder, uint256 _amount, string _message) public onlyOwner() {
+        require(_amount > 0);
+        require(totalSupply_ + _amount <= totalShares_);
+        balances[shareholder] = balances[shareholder].add(_amount);
+        totalSupply_ = totalSupply_ + _amount;
+        emit Mint(shareholder, _amount, _message);
     }
 
 /** Decrease the number of the tokenized shares. There are two use-cases for this function:
@@ -70,64 +75,27 @@ contract AlethenaShares is ERC20, Ownable {
  *     destroyed shares are currently owned by the company.
  *  2) a shareholder wants to take shares offline. This can only happen with the agreement of the 
  *     the company. To do so, the shares must be transferred to the company first, the company call
- *     this function without adjusting totalShares and then assigning the untokenized shares back
- *     to the shareholder in whatever way the new form (e.g. printed certificate) of the shares
- *     require.
+ *     this function and then assigning the untokenized shares back to the shareholder in whatever
+ *     way the new form (e.g. printed certificate) of the shares requires.
  */
-    function unmint(uint256 _newMaxSupply, uint256 _newTotalShares, string _message) public onlyOwner() {
-        require(_newMaxSupply <= _newTotalShares);
-        require(_newMaxSupply < maxSupply_);
-        // company-owned shares are being destroyed
-        uint256 destroyed = _maxSupply - _newMaxSupply;
-        require(destroyed <= balanceOf(owner));
-        balances[owner] = balances[owner].sub(destroyed);
-        maxSupply_ = _newMaxSupply;
-        totalShares_ = _newTotalShares;
-        emit Unmint(maxSupply_, totalShares_, _message);
-    }
-
-  /** @param collateralRate Sets the "exchange rate" for declaring addresses lost */
-
-    uint256 collateralRate = 10**18 wei;
-    event CollateralRateChanged();
-
-    function setCollateralRate(uint256 _collateralRate) public onlyOwner() {
-        collateralRate = _collateralRate;
-        emit CollateralRateChanged();
+    function unmint(uint256 _amount, string _message) public onlyOwner() {
+        require(_amount > 0);
+        require(_amount >= balanceOf(owner));
+        balances[owner] = balances[owner].sub(_amount);
+        totalSupply_ = totalSupply_ - _amount;
+        emit Unmint(_amount, _message);
     }
 
   /** This contract is pausible.  */
     bool public isPaused = false;
 
-  /** @dev Give URL where the legal documents supporting the token can be found.
-      Does this need to be hashed??? */
-    string public TermsAndConditions = "www.alethena.com";
-
-    function setTC(string _TermsAndConditions) public onlyOwner() returns (bool){
-        TermsAndConditions = _TermsAndConditions;
-        emit TCChanged();
-    }
-
-   
   /** @dev Function to set pause.  */
-    function pause(string _message) public onlyOwner() returns (bool) {
-        isPaused = true;
-        emit Pause(_message);
-        return true;
+    function pause(bool _pause, string _message) public onlyOwner() {
+        isPaused = _pause;
+        emit Pause(_pause, _message);
     }
 
-/** 
-* @dev Function to unpause.  
-*/
-    function unpause() public onlyOwner() returns (bool) {
-        isPaused = false;
-        emit Unpause();
-        return true;
-    }
-
-    event Pause(string message);
-    event Unpause();
-    event TCChanged();
+    event Pause(bool paused, string message);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /** 
@@ -142,14 +110,18 @@ Main change: Transfer functions have an additional post function which resolves 
   * @param _value The amount to be transferred.
   */
     function transfer(address _to, uint256 _value) public returns (bool) {
+        clearClaim();
+        internalTransfer(msg.sender, _to, _value);
+        return true;
+    }
+
+    function internalTransfer(address _from, address _to, uint256 _value) internal {
         require(!isPaused);
         require(_to != address(0));
-        require(_value <= balances[msg.sender]);
-        balances[msg.sender] = balances[msg.sender].sub(_value);
+        require(_value <= balances[_from]);
+        balances[_from] = balances[_from].sub(_value);
         balances[_to] = balances[_to].add(_value);
-        resolveClaim(msg.sender);
-        emit Transfer(msg.sender, _to, _value);
-        return true;
+        emit Transfer(_from, _to, _value);
     }
 
   /**
@@ -161,7 +133,6 @@ Main change: Transfer functions have an additional post function which resolves 
         return balances[_owner];
     }
 
-
     mapping (address => mapping (address => uint256)) internal allowed;
 
 
@@ -171,24 +142,10 @@ Main change: Transfer functions have an additional post function which resolves 
    * @param _to address The address which you want to transfer to
    * @param _value uint256 the amount of tokens to be transferred
    */
-    function transferFrom(
-        address _from,
-        address _to,
-        uint256 _value
-    )
-        public
-        returns (bool)
-    {
-        require(!isPaused);
-        require(_to != address(0));
-        require(_value <= balances[_from]);
+    function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
         require(_value <= allowed[_from][msg.sender]);
-
-        balances[_from] = balances[_from].sub(_value);
-        balances[_to] = balances[_to].add(_value);
+        internalTransfer(_from, _to, _value);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-        resolveClaim(msg.sender);
-        emit Transfer(_from, _to, _value);
         return true;
     }
 
@@ -272,111 +229,6 @@ Main change: Transfer functions have an additional post function which resolves 
             allowed[msg.sender][_spender] = oldValue.sub(_subtractedValue);
         }
         emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
-        return true;
-    }
-  
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-     
-    struct Claim {
-        address owner; // the person who created the claim
-        uint256 collateral; // the amount of wei deposited
-        uint timestamp;  // the block in which the claim was created
-    }
-
-    event ClaimMade(address indexed _lostAddress, address indexed _claimer, uint256 _lockTime);
-    event ClaimDeleted(address indexed _lostAddress, address indexed _claimer);
-
-  /** 
-    * @dev Getters for claims. Since keys cannot be deleted, they will be shown by showAllClaims() even if the claim was deleted.
-    * @dev To check specific claim use showClaim()
-    */
-
-    function showClaim(address _claimedAddress, address _claimerAddress) public view returns (uint256){
-        return claims[_claimedAddress][_claimerAddress];
-    }
-
-    function showAllClaims(address _claimedAddress) public view returns (address[]){
-        return indices[_claimedAddress];
-    }
-
-    function showCollaterals(address _claimedAddress) public view returns (uint256){
-        return collaterals[_claimedAddress];
-    }
-
-   
-  
-  /** @dev Anyone can declare that the private key to a certain address was lost by 
-    * @dev calling declareLost and passing the address in question. To prevent random requests
-    * @dev a high collateral needs to be posted.
-    * @dev Using block timestamps is ok as we will replace 1 minute by something like 1 year.
-    */
-    function declareLost (address _lostAddress) public payable returns (bool){
-        require(!isPaused);
-        require(msg.value == balances[_lostAddress]*collateralRate);
-        claims[_lostAddress][msg.sender] = block.timestamp + 1 minutes;
-        indices[_lostAddress].push(msg.sender);
-        collaterals[_lostAddress] = collaterals[_lostAddress].add(msg.value);
-        emit ClaimMade(_lostAddress, msg.sender, claims[_lostAddress][msg.sender]);
-    }
-    
-   /** 
-    * @dev This function is used to resolve a claim.
-    * @dev A rightful owner can claim his address back.
-    * @dev Else, after waiting period address can be claimed.
-    * 
-   */
-    function resolveClaim(address _addressToBeResolved) public returns (bool){
-        require(!isPaused);
-        if (msg.sender == _addressToBeResolved){
-            //pay out collateral
-            msg.sender.transfer(collaterals[_addressToBeResolved]);
-            //DELETE ALL CLAIMS FIR THIS ADDRESS
-            deleteAllClaims(_addressToBeResolved);
-            return true;
-        }
-
-        else{
-            // Check the sender actually has a claim
-            require(claims[_addressToBeResolved][msg.sender] != 0);
-
-            // Check that locking period fpr the sender is over
-            require(claims[_addressToBeResolved][msg.sender] < block.timestamp);
-
-           //pay claimer
-            msg.sender.transfer(collaterals[_addressToBeResolved]);
-            
-           //...and give him the tokens         
-            balances[msg.sender] = balances[msg.sender].add(balances[_addressToBeResolved]);
-            balances[_addressToBeResolved] = 0;
-            emit Transfer(_addressToBeResolved, msg.sender, balances[_addressToBeResolved]);
-        
-          //DELETE ALL CLAIMS FOR THIS ADDRESS
-            deleteAllClaims(_addressToBeResolved);
-            return true;
-        }
-        return false;
-    }
-
-
-     /** @dev This function is to be executed by the owener only in case a legal dispute needs to be settled */
-     
-    function deleteClaim(address _lostAddress, address _claimerAddress) public onlyOwner() returns (bool){
-        claims[_lostAddress][_claimerAddress] = 0;
-        emit ClaimDeleted(_lostAddress, _claimerAddress);
-        return true;
-    }
-
-      /** @dev This function is used to remove all claims on an address after claims have been resolved. */
-
-    function deleteAllClaims(address _lostAddress) private returns (bool){
-
-        uint arrayLength = indices[_lostAddress].length;
-        for (uint i = 0; i < arrayLength; i++){
-            claims[_lostAddress][indices[_lostAddress][i]] = 0;
-            emit ClaimDeleted(_lostAddress, indices[_lostAddress][i]);
-        }
-        collaterals[_lostAddress] = 0;
-
         return true;
     }
 
