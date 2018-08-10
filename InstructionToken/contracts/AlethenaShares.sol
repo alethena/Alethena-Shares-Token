@@ -32,6 +32,10 @@ import "./Claimable.sol";
  */
 contract AlethenaShares is ERC20, Claimable {
 
+    string public constant name = "Alethena Shares";
+    string public constant symbol = "ATH";
+    uint8 public constant decimals = 0; // legally, shares are not divisible
+
     using SafeMath for uint256;
 
       /** URL where the source code as well as the terms and conditions can be found. */
@@ -89,7 +93,11 @@ contract AlethenaShares is ERC20, Claimable {
   /** This contract is pausible.  */
     bool public isPaused = false;
 
-  /** @dev Function to set pause.  */
+  /** @dev Function to set pause.
+   *  This could for example be used in case of a fork of the network, in which case all
+   *  "wrong" forked contracts should be paused in their respective fork. Deciding which
+   *  fork is the "right" one is up to the owner of the contract.
+   */
     function pause(bool _pause, string _message) public onlyOwner() {
         isPaused = _pause;
         emit Pause(_pause, _message);

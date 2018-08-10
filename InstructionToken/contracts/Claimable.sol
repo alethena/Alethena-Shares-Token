@@ -113,7 +113,7 @@ contract Claimable is ERC20Basic, Ownable {
         Claim memory claim = claims[_lostAddress];
         require(claim.collateral != 0, "No claim found");
         delete claims[_lostAddress];
-        owner.transfer(claim.collateral);
+        claim.claimant.transfer(claim.collateral);
         emit ClaimDeleted(_lostAddress, claim.claimant, claim.collateral);
     }
 
