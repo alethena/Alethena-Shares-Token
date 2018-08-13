@@ -22,15 +22,15 @@ contract Claimable is ERC20Basic, Ownable {
     struct Claim {
         address claimant; // the person who created the claim
         uint256 collateral; // the amount of wei deposited
-        uint timestamp;  // the block in which the claim was made
+        uint256 timestamp;  // the block in which the claim was made
     }
 
     /** @param collateralRate Sets the collateral needed per share to file a claim */
-    uint128 collateralRate = 1 ether;
-    uint32 claimPeriod = 1; // 6000*180;
+    uint256 collateralRate = 1 ether;
+    uint256 claimPeriod = 1; // 6000*180;
     mapping(address => Claim) public claims; // there can be at most one claim per address
 
-    function setClaimParameters(uint128 _collateralRate, uint32 _claimPeriodInBlocks) public onlyOwner() {
+    function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInBlocks) public onlyOwner() {
         require(_collateralRate > 0);
         require(_claimPeriodInBlocks > 30*6000); // must be at least 30 days
         collateralRate = _collateralRate;

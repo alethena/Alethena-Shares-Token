@@ -65,7 +65,14 @@ contract AlethenaShares is ERC20, Claimable {
         totalShares_ = _newTotalShares;
     }
 
-  /** @dev Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */
+    function mintMany(address[] _shareholders, uint256[] _amounts, string _message) public onlyOwner() {
+        require(_shareholders.length == _amounts.length);
+        for (uint256 i = 0; i < _shareholders.length; i++){
+            mint(_shareholders[i], _amounts[i], _message);
+        }
+    }
+
+  /** Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */
     function mint(address shareholder, uint256 _amount, string _message) public onlyOwner() {
         require(_amount > 0);
         require(totalSupply_ + _amount <= totalShares_);
@@ -143,7 +150,6 @@ Main change: Transfer functions have an additional post function which resolves 
 
     mapping (address => mapping (address => uint256)) internal allowed;
 
-
   /**
    * @dev Transfer tokens from one address to another
    * @param _from address The address which you want to send tokens from
@@ -152,8 +158,8 @@ Main change: Transfer functions have an additional post function which resolves 
    */
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
         require(_value <= allowed[_from][msg.sender]);
-        internalTransfer(_from, _to, _value);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+        internalTransfer(_from, _to, _value);
         return true;
     }
 
@@ -179,14 +185,7 @@ Main change: Transfer functions have an additional post function which resolves 
    * @param _spender address The address which will spend the funds.
    * @return A uint256 specifying the amount of tokens still available for the spender.
    */
-    function allowance(
-        address _owner,
-        address _spender
-    )
-    public
-    view
-    returns (uint256)
-  {
+    function allowance(address _owner, address _spender) public view returns (uint256) {
         return allowed[_owner][_spender];
     }
 
@@ -199,16 +198,9 @@ Main change: Transfer functions have an additional post function which resolves 
    * @param _spender The address which will spend the funds.
    * @param _addedValue The amount of tokens to increase the allowance by.
    */
-    function increaseApproval(
-        address _spender,
-        uint256 _addedValue
-    )
-        public
-        returns (bool)
-    {
+    function increaseApproval(address _spender, uint256 _addedValue) public returns (bool) {
         require(!isPaused);
-        allowed[msg.sender][_spender] = (
-        allowed[msg.sender][_spender].add(_addedValue));
+        allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
         emit Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
         return true;
     }
@@ -222,13 +214,7 @@ Main change: Transfer functions have an additional post function which resolves 
    * @param _spender The address which will spend the funds.
    * @param _subtractedValue The amount of tokens to decrease the allowance by.
    */
-    function decreaseApproval(
-        address _spender,
-        uint256 _subtractedValue
-    )
-        public
-        returns (bool)
-    {
+    function decreaseApproval(address _spender, uint256 _subtractedValue) public returns (bool) {
         require(!isPaused);
         uint256 oldValue = allowed[msg.sender][_spender];
         if (_subtractedValue > oldValue) {
