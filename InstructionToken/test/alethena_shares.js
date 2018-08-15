@@ -24,6 +24,7 @@ contract('AlethenaShares', (accounts) => {
   const mintShareholder1 = 10;
   const mintShareholder2 = 20;
   const mintShareholder3 = 30;
+  const totalMinted      = 160;
 
   // Have to hardcode this as testrpc and truffle somehow don't work nicely together on this :-() 
   const gasPrice = 100000000000;
@@ -34,13 +35,18 @@ contract('AlethenaShares', (accounts) => {
   });
 
   it('should set basic info correctly', async () => {
+    console.log("Sanity check: Basic information is correct".green);
     const name     = await AlethenaSharesInstance.name();
     const symbol   = await AlethenaSharesInstance.symbol();
     const decimals = await AlethenaSharesInstance.decimals();
+    const totalShares = await AlethenaSharesInstance.totalShares();
+    const totalSupply = await AlethenaSharesInstance.totalSupply();
 
     assert.equal(name, 'Alethena Shares', 'Name incorrect');
     assert.equal(symbol, 'ATH', 'Symbol incorrect');
     assert.equal(decimals, 0, 'Decimals incorrect');
+    assert.equal(totalShares, 1000, 'No. of total shares incorrect');
+    assert.equal(totalSupply, 0, 'Total supply is incorrect');
 });
 
   it('should have zero token balances initially', async () => {
@@ -48,12 +54,14 @@ contract('AlethenaShares', (accounts) => {
     let FirstBalance = await AlethenaSharesInstance.balanceOf(Shareholder1); 
     let SecondBalance = await AlethenaSharesInstance.balanceOf(Shareholder2);  
 
-    assert.equal(OwnerBalance, 0, 'Not minted correctly');
-    assert.equal(FirstBalance, 0, 'Not minted correctly');
-    assert.equal(SecondBalance, 0, 'Not minted correctly');
+    assert.equal(OwnerBalance, 0, 'Balance incorrect');
+    assert.equal(FirstBalance, 0, 'Balance incorrect');
+    assert.equal(SecondBalance, 0, 'Balance incorrect');
 });
 
   it('should mint correctly', async () => {
+    console.log("Check the minting function(s)".green);
+
     const tx1 = await AlethenaSharesInstance.mint(Owner,mintOwner,'Testing mint');
     const tx2 = await AlethenaSharesInstance.mintMany(
       [Shareholder1, Shareholder2, Shareholder3],
@@ -70,7 +78,12 @@ contract('AlethenaShares', (accounts) => {
     assert.equal(FirstBalance, mintShareholder1, 'Not minted correctly');
     assert.equal(SecondBalance, mintShareholder2, 'Not minted correctly');
     assert.equal(ThirdBalance, mintShareholder3, 'Not minted correctly');  
-  
+
+    const newTotalSupply = await AlethenaSharesInstance.totalSupply()
+
+    //Test that total supply gets adjusted correctly 
+    assert.equal(newTotalSupply,totalMinted);
+
     //Test events
     assert.equal(tx1.logs[0].event,'Mint');
     assert.equal(tx1.logs[0].args.shareholder,Owner);
@@ -113,7 +126,7 @@ it('should check for array lengths in batch mint', async () => {
 });
 
 it('should let OtherAddress1 make a claim on Shareholder1', async () => {
-  console.log("Case 1: Legitimate claim is made and reolved after waiting period".yellow);
+  console.log("Case 1: Legitimate claim is made and reolved after waiting period".green);
 
   const Shareholder1Balance = await AlethenaSharesInstance.balanceOf(Shareholder1);
   const Collateral1 = Shareholder1Balance*10**18;
@@ -155,7 +168,7 @@ it("should revert if target address has zero balance", async () => {
 
 
 it('should let OtherAddress2 make a claim on Shareholder2', async () => {
-  console.log("Case 2: Malicious or accidental claim is made but cleared by a transaction".yellow);
+  console.log("Case 2: Malicious or accidental claim is made but cleared by a transaction".green);
   ShareHolder2Balance = await AlethenaSharesInstance.balanceOf(Shareholder2);
   Collateral2 = ShareHolder2Balance*10**18
   const tx4 = await AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress2, value: Collateral2});
@@ -181,7 +194,7 @@ it('should clear claim on OtherAddress2 after a transaction', async () => {
 });
 
 it('should let OtherAddress3 make a claim on Shareholder3', async () => {
-  console.log("Case 3: A claim is made but deleted by the owner of the contract".yellow);
+  console.log("Case 3: A claim is made but deleted by the owner of the contract".green);
   let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
   Collateral3 = ShareHolder3Balance*10**18
   await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
@@ -214,7 +227,7 @@ it('should delete claim on OtherAddress3 when triggered by owner of the contract
 });
 
 it('should let OtherAddress3 make a claim again on Shareholder3', async () => {
-  console.log("Case 4: A claim is made but cleared by owner of claimed address".yellow);
+  console.log("Case 4: A claim is made but cleared by owner of claimed address".green);
   let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
   Collateral3 = ShareHolder3Balance*10**18
   await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
@@ -245,9 +258,35 @@ it('should clear the claim on OtherAddress3 when triggered by the owner of the c
 });
 
 it('should unmint correctly from the owner account', async () => {
+  console.log("Testing the unmint function".green);
   await AlethenaSharesInstance.unmint(5,'Maybe we have done a capital decrease or smth.',{from: Owner});
 });
 
+it('should not let anyone other than the owner of the contract unmint', async () => {
+  await shouldRevert(AlethenaSharesInstance.unmint(5,'Maybe I just want to mess with the company.',{from: Tokenholder1}));
+});
+
+it('should let the contract owner set the claim parameters', async () => {
+  console.log("Testing the setters for all parameters".green);
+  const newCollateralRate = 5*10**18;
+  const tx7 = await AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Owner});
+
+  //Make sure change happened
+  assert.equal(await AlethenaSharesInstance.collateralRate(),newCollateralRate);
+
+  // there are no events to check
+});
+
+it('should not let anyone other than the owner set claim parameters', async () => {
+  const newCollateralRate = 5*10**18;
+  await shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Shareholder1}));
+});
+
+it('should revert when claim parameters to be set are out of range', async () => {
+  const newCollateralRate = 5*10**18;
+  await shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
+  await shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
+});
 
 });
 

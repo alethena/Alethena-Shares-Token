@@ -26,8 +26,8 @@ contract Claimable is ERC20Basic, Ownable {
     }
 
     /** @param collateralRate Sets the collateral needed per share to file a claim */
-    uint256 collateralRate = 1 ether;
-    uint256 claimPeriod = 1000*60*60*24*30; // In Milliseconds ;
+    uint256 public collateralRate = 1 ether;
+    uint256 public claimPeriod = 1000*60*60*24*30; // In Milliseconds ;
     mapping(address => Claim) public claims; // there can be at most one claim per address
 
     function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInDays) public onlyOwner() {
@@ -41,7 +41,7 @@ contract Claimable is ERC20Basic, Ownable {
     event ClaimMade(address indexed _lostAddress, address indexed _claimant, uint256 _balance);
     event ClaimCleared(address indexed _lostAddress, uint256 collateral);
     event ClaimDeleted(address indexed _lostAddress, address indexed _claimant, uint256 collateral);
-    event ClaimResolved(address indexed _lostAddress, address indexed _claimant, uint256 collateral);
+    event ClaimResolved(address indexed _lostAddress, address indexed _claimant, uint256 collateral); 
   
   /** Anyone can declare that the private key to a certain address was lost by calling declareLost
     * providing a deposit/collateral. There are three possibilities of what can happen with the claim:
