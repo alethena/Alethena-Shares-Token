@@ -22,19 +22,20 @@ contract Claimable is ERC20Basic, Ownable {
     struct Claim {
         address claimant; // the person who created the claim
         uint256 collateral; // the amount of wei deposited
-        uint256 timestamp;  // the block in which the claim was made
+        uint256 timestamp;  // the timestamp of the block in which the claim was made
     }
 
     /** @param collateralRate Sets the collateral needed per share to file a claim */
     uint256 collateralRate = 1 ether;
-    uint256 claimPeriod = 1; // 6000*180;
+    uint256 claimPeriod = 1000*60*60*24*30; // In Milliseconds ;
     mapping(address => Claim) public claims; // there can be at most one claim per address
 
-    function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInBlocks) public onlyOwner() {
+    function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInDays) public onlyOwner() {
+        uint256 claimPeriodInMilliseconds = _claimPeriodInDays*1000*60*60*24;
         require(_collateralRate > 0);
-        require(_claimPeriodInBlocks > 30*6000); // must be at least 30 days
+        require(_claimPeriodInDays > 30); // must be at least 30 days
         collateralRate = _collateralRate;
-        claimPeriod = _claimPeriodInBlocks;
+        claimPeriod = claimPeriodInMilliseconds;
     }
 
     event ClaimMade(address indexed _lostAddress, address indexed _claimant, uint256 _balance);
@@ -66,9 +67,21 @@ contract Claimable is ERC20Basic, Ownable {
         claims[_lostAddress] = Claim({
             claimant: msg.sender,
             collateral: msg.value,
-            timestamp: block.number
+            timestamp: block.timestamp
         });
         emit ClaimMade(_lostAddress, msg.sender, balance);
+    }
+
+    function getClaimant(address _lostAddress) public view returns (address){
+        return claims[_lostAddress].claimant;
+    }
+
+    function getCollateral(address _lostAddress) public view returns (uint256){
+        return claims[_lostAddress].collateral;
+    }
+
+    function getTimeStamp(address _lostAddress) public view returns (uint256){
+        return claims[_lostAddress].timestamp;
     }
 
     /**
@@ -96,8 +109,7 @@ contract Claimable is ERC20Basic, Ownable {
         Claim memory claim = claims[_lostAddress];
         require(claim.collateral != 0, "No claim found");
         require(claim.claimant == msg.sender);
-        require(claim.timestamp + claimPeriod >= block.number);
-
+        require(claim.timestamp + claimPeriod <= block.timestamp); //Double check this. I think the inequality should be this way around.
         address claimant = claim.claimant;
         delete claims[_lostAddress];
         claimant.transfer(claim.collateral);

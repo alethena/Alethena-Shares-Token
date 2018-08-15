@@ -13,9 +13,9 @@ truffle migrate
 truffle console
 
 var IT;
-InstructionToken.deployed().then(function(instance){IT=instance});
+AlethenaShares.deployed().then(function(instance){IT=instance});
 
-IT.mint([web3.eth.accounts[0], web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[3], web3.eth.accounts[4]], [5,5,5,5,5];
+IT.mintMany([web3.eth.accounts[0], web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[3], web3.eth.accounts[4]], [5,5,5,5,5],'test');
 
 
 IT.endMinting()

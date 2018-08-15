@@ -8,7 +8,7 @@ contract AlethenaSharesTest {
 
     event TestEvent(string message);
 
-    function testShares() public returns (bool){
+    function testInitialBalance() public returns (bool){
         //AlethenaShares registry = AlethenaShares(msg.sender);
         //assert(registry.balanceOf(msg.sender) == 0);
         emit TestEvent("Juhuu");
