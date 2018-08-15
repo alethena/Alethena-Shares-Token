@@ -244,6 +244,10 @@ it('should clear the claim on OtherAddress3 when triggered by the owner of the c
   assert.equal(BalIs,BalShouldBe);
 });
 
+it('should unmint correctly from the owner account', async () => {
+  await AlethenaSharesInstance.unmint(5,'Maybe we have done a capital decrease or smth.',{from: Owner});
+});
+
 
 });
 

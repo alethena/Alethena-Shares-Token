@@ -91,7 +91,7 @@ contract AlethenaShares is ERC20, Claimable {
  */
     function unmint(uint256 _amount, string _message) public onlyOwner() {
         require(_amount > 0);
-        require(_amount >= balanceOf(owner));
+        require(_amount <= balanceOf(owner));
         balances[owner] = balances[owner].sub(_amount);
         totalSupply_ = totalSupply_ - _amount;
         emit Unmint(_amount, _message);
