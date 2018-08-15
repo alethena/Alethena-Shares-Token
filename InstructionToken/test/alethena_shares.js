@@ -14,9 +14,9 @@ contract('AlethenaShares', (accounts) => {
   const Tokenholder1      = accounts[4];
   const Tokenholder2      = accounts[5];
   const Tokenholder3      = accounts[6];
-  const OtherAddress1      = accounts[7]; // Used by Shareholder 1 to get back token
-  const OtherAddress2      = accounts[8]; // Used to attack Shareholder2
-  const OtherAddress3      = accounts[9]; // Used to attack Shareholder3
+  const OtherAddress1     = accounts[7]; // Used by Shareholder 1 to get back token
+  const OtherAddress2     = accounts[8]; // Used to attack Shareholder2
+  const OtherAddress3     = accounts[9]; // Used to attack Shareholder3
   
 
   // Amounts to be minted for users
@@ -25,7 +25,8 @@ contract('AlethenaShares', (accounts) => {
   const mintShareholder2 = 20;
   const mintShareholder3 = 30;
 
-
+  // Have to hardcode this as testrpc and truffle somehow don't work nicely together on this :-() 
+  const gasPrice = 100000000000;
   // Get an instance of the token
   let AlethenaSharesInstance;
   before(async () => {
@@ -111,8 +112,9 @@ it('should check for array lengths in batch mint', async () => {
       'Testing batch mint',{from: Owner}));
 });
 
-  
 it('should let OtherAddress1 make a claim on Shareholder1', async () => {
+  console.log("Case 1: Legitimate claim is made and reolved after waiting period".yellow);
+
   const Shareholder1Balance = await AlethenaSharesInstance.balanceOf(Shareholder1);
   const Collateral1 = Shareholder1Balance*10**18;
   const tx3 = await AlethenaSharesInstance.declareLost(Shareholder1,{from: OtherAddress1, value: Collateral1});
@@ -137,15 +139,23 @@ it('Increase time', async () => {
   await increaseTime(1000*60*60*24*300);
 });
 
-it('should clear the claim on Shareholder1 after the waiting period is over', async () => {
+it('should allow to resolve the claim on Shareholder1 after the waiting period is over', async () => {
   await AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1});
+
+  //CHECK IT WORKED!!!!
 });
 
 it("should revert if a claim doesn't have enough funding", async () => {
   await shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress1, value: 10*10**18}));
 });
 
+it("should revert if target address has zero balance", async () => {
+  await shouldRevert(AlethenaSharesInstance.declareLost(Tokenholder3,{from: OtherAddress1, value: 10*10**18}));
+});
+
+
 it('should let OtherAddress2 make a claim on Shareholder2', async () => {
+  console.log("Case 2: Malicious or accidental claim is made but cleared by a transaction".yellow);
   ShareHolder2Balance = await AlethenaSharesInstance.balanceOf(Shareholder2);
   Collateral2 = ShareHolder2Balance*10**18
   const tx4 = await AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress2, value: Collateral2});
@@ -157,7 +167,11 @@ it('should let OtherAddress2 make a claim on Shareholder2', async () => {
   assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
 });
 
-it('Clear claim on OtherAddress2 after a transaction', async () => {
+it("should revert claim on Shareholder2 because target address is already claimed", async () => {
+  await shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress3, value: 10*10**18}));
+});
+
+it('should clear claim on OtherAddress2 after a transaction', async () => {
   var tx5 = await AlethenaSharesInstance.transfer(Tokenholder2,5,{from: Shareholder2});
   
   //Check that struct was deleted
@@ -166,11 +180,72 @@ it('Clear claim on OtherAddress2 after a transaction', async () => {
   assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
 });
 
+it('should let OtherAddress3 make a claim on Shareholder3', async () => {
+  console.log("Case 3: A claim is made but deleted by the owner of the contract".yellow);
+  let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
+  Collateral3 = ShareHolder3Balance*10**18
+  await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
+  blockstamp =  web3.eth.getBlock('latest').timestamp;
 
+  //Check that data in struct is correct
+  assert.equal(OtherAddress3,await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(Collateral3,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder3)); 
+});
+
+it('should revert when anyone other than the owner calls deleteClaim', async () => {
+  await shouldRevert(AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Shareholder1}));
+});
+
+it('should delete claim on OtherAddress3 when triggered by owner of the contract', async () => {
+  let OtherAddress3EtherBalance = await web3.eth.getBalance(OtherAddress3);
+  await AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Owner});
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder3));
+ 
+  let BalShouldBe = OtherAddress3EtherBalance.plus(Collateral3).toString();
+  let BalIs = await web3.eth.getBalance(OtherAddress3).toString();
+
+  //Check that collateral was returned
+  assert.equal(BalShouldBe,BalIs);
 
 });
 
+it('should let OtherAddress3 make a claim again on Shareholder3', async () => {
+  console.log("Case 4: A claim is made but cleared by owner of claimed address".yellow);
+  let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
+  Collateral3 = ShareHolder3Balance*10**18
+  await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
+  blockstamp =  web3.eth.getBlock('latest').timestamp;
 
+  //Check that data in struct is correct
+  assert.equal(OtherAddress3,await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(Collateral3,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder3)); 
+});
+
+
+it('should clear the claim on OtherAddress3 when triggered by the owner of the claimed address', async () => {
+  let Shareholder3EtherBalance = await web3.eth.getBalance(Shareholder3);
+  const tx6 = await AlethenaSharesInstance.clearClaim({from: Shareholder3});
+  const gasUsed = tx6.receipt.gasUsed;
+
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder3));
+  
+  //Check that collateral is payed out correctly - have to account for transaction cost
+  const txCost =gasPrice*gasUsed; 
+  BalShouldBe = Shareholder3EtherBalance.plus(Collateral3).minus(txCost).toString();
+  BalIs = await web3.eth.getBalance(Shareholder3).toString();  
+  assert.equal(BalIs,BalShouldBe);
+});
+
+
+});
 
 // HELPER FUNCTIONS. Should be put in a separate file at some point.
 
