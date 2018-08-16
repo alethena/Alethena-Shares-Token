@@ -25,6 +25,7 @@ contract('AlethenaShares', (accounts) => {
   const mintShareholder2 = 20;
   const mintShareholder3 = 30;
   const totalMinted      = 160;
+  const totalSharesInit  = 1000;
 
   // Have to hardcode this as testrpc and truffle somehow don't work nicely together on this :-() 
   const gasPrice = 100000000000;
@@ -45,7 +46,7 @@ contract('AlethenaShares', (accounts) => {
     assert.equal(name, 'Alethena Shares', 'Name incorrect');
     assert.equal(symbol, 'ATH', 'Symbol incorrect');
     assert.equal(decimals, 0, 'Decimals incorrect');
-    assert.equal(totalShares, 1000, 'No. of total shares incorrect');
+    assert.equal(totalShares, totalSharesInit, 'No. of total shares incorrect');
     assert.equal(totalSupply, 0, 'Total supply is incorrect');
 });
 
@@ -126,7 +127,7 @@ it('should check for array lengths in batch mint', async () => {
 });
 
 it('should let OtherAddress1 make a claim on Shareholder1', async () => {
-  console.log("Case 1: Legitimate claim is made and reolved after waiting period".green);
+  console.log("Case 1: Legitimate claim is made and resolved after waiting period".green);
 
   const Shareholder1Balance = await AlethenaSharesInstance.balanceOf(Shareholder1);
   const Collateral1 = Shareholder1Balance*10**18;
@@ -153,9 +154,31 @@ it('Increase time', async () => {
 });
 
 it('should allow to resolve the claim on Shareholder1 after the waiting period is over', async () => {
-  await AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1});
+  //Record state before
+  const OtherAddress1Balance = await AlethenaSharesInstance.balanceOf(OtherAddress1);
+  const OtherAddress1EtherBalance = await web3.eth.getBalance(OtherAddress1);
+  const Collateral7 = await AlethenaSharesInstance.getCollateral(Shareholder1);
+  const Shareholder1BalanceBefore = await AlethenaSharesInstance.balanceOf(Shareholder1);
 
-  //CHECK IT WORKED!!!!
+  //Resolve the claim
+  const tx7 = await AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1});
+  const gasUsed7 = tx7.receipt.gasUsed;
+
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder1));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder1));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder1));
+
+  //Check that tokens were transferred
+  const OtherAddress1BalanceAfter = await AlethenaSharesInstance.balanceOf(OtherAddress1)  
+  assert.equal(OtherAddress1Balance.plus(Shareholder1BalanceBefore).toString(),OtherAddress1BalanceAfter.toString());
+  assert.equal(0,await AlethenaSharesInstance.balanceOf(Shareholder1));
+
+  //Give collateral back
+  const txCost7 =gasPrice*gasUsed7; 
+  BalShouldBe = OtherAddress1EtherBalance.plus(Collateral7).minus(txCost7).toString();
+  BalIs = await web3.eth.getBalance(OtherAddress1).toString();  
+  assert.equal(BalIs,BalShouldBe);
 });
 
 it("should revert if a claim doesn't have enough funding", async () => {
@@ -228,7 +251,7 @@ it('should delete claim on OtherAddress3 when triggered by owner of the contract
 
 it('should let OtherAddress3 make a claim again on Shareholder3', async () => {
   console.log("Case 4: A claim is made but cleared by owner of claimed address".green);
-  let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
+  ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
   Collateral3 = ShareHolder3Balance*10**18
   await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
   blockstamp =  web3.eth.getBlock('latest').timestamp;
@@ -287,6 +310,37 @@ it('should revert when claim parameters to be set are out of range', async () =>
   await shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
   await shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
 });
+
+it('should let the contract owner set the number of shares', async () => {
+  const newTotalShareNumber = 1500;
+  await AlethenaSharesInstance.setTotalShares(newTotalShareNumber, {from: Owner});
+
+  //Make sure change happened
+  assert.equal(await AlethenaSharesInstance.totalShares(),newTotalShareNumber);
+
+  // there are no events to check
+});
+
+it('should revert when totalSupply exceeds no. of shares', async () => {
+  await shouldRevert(AlethenaSharesInstance.setTotalShares(50, {from: Owner}));
+});
+
+it('Only owner can pause', async () => {
+  console.log("Check that pause works".green);
+  await shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
+});
+
+it('pause the contract', async () => {
+  const pauseMessage = 'Keep calm and carry on with new contract xyz';
+  const tx8 = await AlethenaSharesInstance.pause(true, pauseMessage,{from: Owner});
+
+  //Check events:
+  assert.equal(tx8.logs[0].event,'Pause');
+  assert.equal(tx8.logs[0].args.paused,true);
+  assert.equal(tx8.logs[0].args.message,pauseMessage);
+});
+
+  // Call all functions here and make sure they work without pause
 
 });
 
