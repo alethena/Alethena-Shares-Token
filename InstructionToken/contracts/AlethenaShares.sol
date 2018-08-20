@@ -157,6 +157,7 @@ Main change: Transfer functions have an additional post function which resolves 
    * @param _value uint256 the amount of tokens to be transferred
    */
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
+        require(!isPaused);
         require(_value <= allowed[_from][msg.sender]);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
         internalTransfer(_from, _to, _value);
@@ -179,6 +180,7 @@ Main change: Transfer functions have an additional post function which resolves 
         return true;
     }
 
+    event Approval(address approver, address spender, uint256 value);
   /**
    * @dev Function to check the amount of tokens that an owner allowed to a spender.
    * @param _owner address The address which owns the funds.

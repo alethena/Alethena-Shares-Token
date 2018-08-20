@@ -29,6 +29,7 @@ contract('AlethenaShares', (accounts) => {
 
   // Have to hardcode this as testrpc and truffle somehow don't work nicely together on this :-() 
   const gasPrice = 100000000000;
+
   // Get an instance of the token
   let AlethenaSharesInstance;
   before(async () => {
@@ -325,7 +326,62 @@ it('should revert when totalSupply exceeds no. of shares', async () => {
   await shouldRevert(AlethenaSharesInstance.setTotalShares(50, {from: Owner}));
 });
 
-it('Only owner can pause', async () => {
+
+
+it('should implement implement the approval function correctly', async () => {
+  console.log('Testing standard ERC20 functionality'.green);
+  const approvalBefore = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  const tx9 = await AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1});
+  const approvalAfter = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  // Check approval happened
+  assert.equal(approvalBefore.plus(1).toString(),approvalAfter.toString())
+
+  // Check events:
+  assert.equal(tx9.logs[0].event,'Approval');
+  assert.equal(tx9.logs[0].args.approver,OtherAddress1);
+  assert.equal(tx9.logs[0].args.spender,OtherAddress2);
+  assert.equal(tx9.logs[0].args.value,1);
+});
+
+it('should implement implement the increaseApproval function correctly', async () => {
+  const approvalBefore1 = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  const tx10 = await AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1});
+  const approvalAfter1 = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  
+  // Check approval happened
+  assert.equal(approvalBefore1.plus(2).toString(),approvalAfter1.toString())
+
+  // Check events:
+  assert.equal(tx10.logs[0].event,'Approval');
+  assert.equal(tx10.logs[0].args.approver,OtherAddress1);
+  assert.equal(tx10.logs[0].args.spender,OtherAddress2);
+  assert.equal(tx10.logs[0].args.value,3);
+});
+
+it('should implement implement the transferFrom function correctly', async () => {
+  const beforeTransferFrom1 = await AlethenaSharesInstance.balanceOf(OtherAddress1);
+  const beforeTransferFrom2 = await AlethenaSharesInstance.balanceOf(OtherAddress2);
+  const beforeTransferFrom3 = await AlethenaSharesInstance.balanceOf(OtherAddress3);
+
+  const tx12 = await AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2});
+  
+  const afterTransferFrom1 = await AlethenaSharesInstance.balanceOf(OtherAddress1);
+  const afterTransferFrom2 = await AlethenaSharesInstance.balanceOf(OtherAddress2);
+  const afterTransferFrom3 = await AlethenaSharesInstance.balanceOf(OtherAddress3);
+
+  // Check transfer happened
+  assert.equal(beforeTransferFrom1.minus(1).toString(), afterTransferFrom1);
+  assert.equal(beforeTransferFrom2.toString(), afterTransferFrom2);
+  assert.equal(beforeTransferFrom3.plus(1).toString(), afterTransferFrom3);
+
+  // Check events:
+  assert.equal(tx12.logs[0].event,'Transfer');
+  assert.equal(tx12.logs[0].args.from,OtherAddress1);
+  assert.equal(tx12.logs[0].args.to,OtherAddress3);
+  assert.equal(tx12.logs[0].args.value,1);
+});
+
+it('should only let the owner execute the pause function', async () => {
   console.log("Check that pause works".green);
   await shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
 });
@@ -340,7 +396,24 @@ it('pause the contract', async () => {
   assert.equal(tx8.logs[0].args.message,pauseMessage);
 });
 
-  // Call all functions here and make sure they work without pause
+// Call all functions here and make sure they work without pause
+it('should revert on user actions if contract is paused', async () => {
+  await shouldRevert(AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2}));
+  await shouldRevert(AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1}));
+  await shouldRevert(AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1}));
+  await shouldRevert(AlethenaSharesInstance.transfer(OtherAddress2,1,{from: OtherAddress1}));
+});
+
+it('unpause the contract', async () => {
+  const unpauseMessage = 'Keep calm and carry on with this contract';
+  const tx11 = await AlethenaSharesInstance.pause(false, unpauseMessage,{from: Owner});
+
+  //Check events:
+  assert.equal(tx11.logs[0].event,'Pause');
+  assert.equal(tx11.logs[0].args.paused,false);
+  assert.equal(tx11.logs[0].args.message,unpauseMessage);
+});
+
 
 });
 
