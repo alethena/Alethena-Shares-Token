@@ -1,7 +1,7 @@
 //import expectThrow from './tools';
 'use-strict'
 const AlethenaShares = artifacts.require('./AlethenaShares.sol');
-
+const helpers = require('../utilities/helpers.js');
 
 
 contract('AlethenaShares', (accounts) => {
@@ -110,18 +110,18 @@ contract('AlethenaShares', (accounts) => {
 });
   
 it('should only alow owner to mint', async () => {
-  await shouldRevert(AlethenaSharesInstance.mint(Owner,mintOwner,'Testing mint',{from: Shareholder1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.mint(Owner,mintOwner,'Testing mint',{from: Shareholder1}));
 });
 
 it('should only alow owner to batch mint', async () => {
-  await shouldRevert(AlethenaSharesInstance.mintMany(
+  await helpers.shouldRevert(AlethenaSharesInstance.mintMany(
       [Shareholder1, Shareholder2, Shareholder3],
       [mintShareholder1, mintShareholder2, mintShareholder3],
       'Testing batch mint',{from: Shareholder1}));
 });
 
 it('should check for array lengths in batch mint', async () => {
-  await shouldRevert(AlethenaSharesInstance.mintMany(
+  await helpers.shouldRevert(AlethenaSharesInstance.mintMany(
       [Shareholder1, Shareholder2, Shareholder3],
       [mintShareholder1, mintShareholder2],
       'Testing batch mint',{from: Owner}));
@@ -143,15 +143,17 @@ it('should let OtherAddress1 make a claim on Shareholder1', async () => {
   //Test events
   assert.equal(Shareholder1, tx3.logs[0].args._lostAddress, 'Lost address is incorrect');
   assert.equal(OtherAddress1, tx3.logs[0].args._claimant, 'Claimant address is incorrect');
+  assert.equal(Shareholder1Balance.toString(), tx3.logs[0].args._balance.toString(), 'Balance is incorrect');
 
 });
 
 it('should reject clearing the claim on Shareholder1 before the waiting period is over', async () => {
-  await shouldRevert(AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1}));
 });
 
 it('Increase time', async () => {
-  await increaseTime(1000*60*60*24*300);
+  const timeIncrease = 1000*60*60*24*300; //300 days, ms, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
 });
 
 it('should allow to resolve the claim on Shareholder1 after the waiting period is over', async () => {
@@ -183,11 +185,11 @@ it('should allow to resolve the claim on Shareholder1 after the waiting period i
 });
 
 it("should revert if a claim doesn't have enough funding", async () => {
-  await shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress1, value: 10*10**18}));
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress1, value: 10*10**18}));
 });
 
 it("should revert if target address has zero balance", async () => {
-  await shouldRevert(AlethenaSharesInstance.declareLost(Tokenholder3,{from: OtherAddress1, value: 10*10**18}));
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Tokenholder3,{from: OtherAddress1, value: 10*10**18}));
 });
 
 
@@ -205,7 +207,7 @@ it('should let OtherAddress2 make a claim on Shareholder2', async () => {
 });
 
 it("should revert claim on Shareholder2 because target address is already claimed", async () => {
-  await shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress3, value: 10*10**18}));
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress3, value: 10*10**18}));
 });
 
 it('should clear claim on OtherAddress2 after a transaction', async () => {
@@ -231,7 +233,7 @@ it('should let OtherAddress3 make a claim on Shareholder3', async () => {
 });
 
 it('should revert when anyone other than the owner calls deleteClaim', async () => {
-  await shouldRevert(AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Shareholder1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Shareholder1}));
 });
 
 it('should delete claim on OtherAddress3 when triggered by owner of the contract', async () => {
@@ -287,7 +289,7 @@ it('should unmint correctly from the owner account', async () => {
 });
 
 it('should not let anyone other than the owner of the contract unmint', async () => {
-  await shouldRevert(AlethenaSharesInstance.unmint(5,'Maybe I just want to mess with the company.',{from: Tokenholder1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.unmint(5,'Maybe I just want to mess with the company.',{from: Tokenholder1}));
 });
 
 it('should let the contract owner set the claim parameters', async () => {
@@ -303,13 +305,13 @@ it('should let the contract owner set the claim parameters', async () => {
 
 it('should not let anyone other than the owner set claim parameters', async () => {
   const newCollateralRate = 5*10**18;
-  await shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Shareholder1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Shareholder1}));
 });
 
 it('should revert when claim parameters to be set are out of range', async () => {
   const newCollateralRate = 5*10**18;
-  await shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
-  await shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
 });
 
 it('should let the contract owner set the number of shares', async () => {
@@ -323,10 +325,12 @@ it('should let the contract owner set the number of shares', async () => {
 });
 
 it('should revert when totalSupply exceeds no. of shares', async () => {
-  await shouldRevert(AlethenaSharesInstance.setTotalShares(50, {from: Owner}));
+  await helpers.shouldRevert(AlethenaSharesInstance.setTotalShares(50, {from: Owner}));
 });
 
-
+// it('should only alow transfers of integer amounts of tokens', async () => {
+//   await helpers.shouldRevert(AlethenaSharesInstance.transfer(Shareholder1,5.5,{from: Shareholder2}));
+// });
 
 it('should implement implement the approval function correctly', async () => {
   console.log('Testing standard ERC20 functionality'.green);
@@ -383,7 +387,7 @@ it('should implement implement the transferFrom function correctly', async () =>
 
 it('should only let the owner execute the pause function', async () => {
   console.log("Check that pause works".green);
-  await shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
+  await helpers.shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
 });
 
 it('pause the contract', async () => {
@@ -396,12 +400,12 @@ it('pause the contract', async () => {
   assert.equal(tx8.logs[0].args.message,pauseMessage);
 });
 
-// Call all functions here and make sure they work without pause
 it('should revert on user actions if contract is paused', async () => {
-  await shouldRevert(AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2}));
-  await shouldRevert(AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1}));
-  await shouldRevert(AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1}));
-  await shouldRevert(AlethenaSharesInstance.transfer(OtherAddress2,1,{from: OtherAddress1}));
+  // Call all functions here and make sure they work without pause
+  await helpers.shouldRevert(AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2}));
+  await helpers.shouldRevert(AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.transfer(OtherAddress2,1,{from: OtherAddress1}));
 });
 
 it('unpause the contract', async () => {
@@ -416,44 +420,3 @@ it('unpause the contract', async () => {
 
 
 });
-
-// HELPER FUNCTIONS. Should be put in a separate file at some point.
-
-//Used to increase time in simulated EVM
-async function increaseTime (duration) {
-  const id = Date.now();
-
-  return new Promise((resolve, reject) => {
-    web3.currentProvider.sendAsync({
-      jsonrpc: '2.0',
-      method: 'evm_increaseTime',
-      params: [duration],
-      id: id,
-    }, err1 => {
-      if (err1) return reject(err1);
-
-      web3.currentProvider.sendAsync({
-        jsonrpc: '2.0',
-        method: 'evm_mine',
-        id: id + 1,
-      }, (err2, res) => {
-        return err2 ? reject(err2) : resolve(res);
-      });
-    });
-  });
-}
-
-//Used to check that EVM reverts when we expect it
-async function shouldRevert(promise) {
-  try {
-      await promise;
-  } catch (error) {
-      const revert = error.message.search('revert') >= 0;
-      assert(
-          revert,
-          'Expected throw, got \'' + error + '\' instead',
-      );
-      return;
-  }
-  assert.fail('Expected throw not received');
-}
