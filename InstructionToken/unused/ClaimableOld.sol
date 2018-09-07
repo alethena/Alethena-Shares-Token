@@ -10,10 +10,9 @@ import "./ERC20Basic.sol";
  * invalid so the company can issue replacements. Here, we want a solution that does not depend on 
  * third parties to resolve such cases. Instead, when someone has lost a private key, he can use the
  * declareLost function to post a deposit and claim that the shares assigned to a specific address are
- * lost. To prevent front running, a commit reveal scheme is used. If he actually is the owner of the shares,
- * he needs to wait for a certain period and can then reclaim the lost shares as well as the deposit. 
- * If he is an attacker trying to claim shares belonging to someone else, he risks losing the deposit 
- * as it can be claimed at anytime by the rightful owner.
+ * lost. If he actually is the owner of the shares, he needs to wait for a certain period and can then
+ * reclaim the lost shares as well as the deposit. If he is an attacker trying to claim shares belonging
+ * to someone else, he risks losing the deposit as it can be claimed at anytime by the rightful owner.
  * Furthermore, the company itself can delete claims at any time and take the deposit. So in order to
  * use this functionality, one needs to trust the company to do the right thing and to handle potential
  * disputes responsibly. If you do not trust the company to do so, don't lose your private keys. :)
@@ -26,20 +25,10 @@ contract Claimable is ERC20Basic, Ownable {
         uint256 timestamp;  // the timestamp of the block in which the claim was made
     }
 
-    struct PreClaim {
-        bytes32 msghash; // the hash of nonce + address to be claimed
-        uint256 timestamp;  // the timestamp of the block in which the preclaim was made
-    }
-
     /** @param collateralRate Sets the collateral needed per share to file a claim */
     uint256 public collateralRate = 1 ether;
-
     uint256 public claimPeriod = 1000*60*60*24*30; // In Milliseconds ;
-    uint256 public preClaimPeriod = 1000*60*60*24; // In Milliseconds ;
-
-    mapping(address => Claim) public claims; // there can be at most one claim per address, here address is claimed address
-    mapping(address => PreClaim) public preClaims; // there can be at most one preclaim per address, here address is claimer
-
+    mapping(address => Claim) public claims; // there can be at most one claim per address
 
     function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInDays) public onlyOwner() {
         uint256 claimPeriodInMilliseconds = _claimPeriodInDays*1000*60*60*24;
@@ -50,7 +39,6 @@ contract Claimable is ERC20Basic, Ownable {
     }
 
     event ClaimMade(address indexed _lostAddress, address indexed _claimant, uint256 _balance);
-    event ClaimPrepared(address indexed _claimer);
     event ClaimCleared(address indexed _lostAddress, uint256 collateral);
     event ClaimDeleted(address indexed _lostAddress, address indexed _claimant, uint256 collateral);
     event ClaimResolved(address indexed _lostAddress, address indexed _claimant, uint256 collateral); 
@@ -70,38 +58,17 @@ contract Claimable is ERC20Basic, Ownable {
     * It is highly recommended that the owner observes the claims made and informs the owners of the claimed addresses
     * whenever a claim is made for their address (this of course is only possible if they are known to the owner, e.g.
     * through a shareholder register).
-    * To prevent frontrunning attacks, a claim can only be made if the information revealed when calling "claimLost" 
-    * was previously commited using the "prepareClaim" function. 
     */
-
-    function prepareClaim(bytes32 _hashedpackage) public{
-        preClaims[msg.sender] = PreClaim({ 
-            msghash: _hashedpackage,
-            timestamp: block.timestamp
-        });
-        //emit ClaimPrepared(msg.sender);
-    }
-
-    function validateClaim(address _lostAddress, bytes32 _nonce) private view returns (bool){
-        PreClaim memory preClaim = preClaims[msg.sender];
-        require(preClaim.msghash != 0);
-        require(preClaim.timestamp + preClaimPeriod <= block.timestamp);
-        return preClaim.msghash == keccak256(abi.encodePacked(_nonce, msg.sender, _lostAddress));
-    }
-
-    function declareLost(address _lostAddress, bytes32 _nonce) public payable{
+    function declareLost(address _lostAddress) public payable{
         uint256 balance = balanceOf(_lostAddress);
         require(balance > 0);
         require(msg.value >= balance*collateralRate);
         require(claims[_lostAddress].collateral == 0);
-        require(validateClaim(_lostAddress, _nonce));
-
         claims[_lostAddress] = Claim({
             claimant: msg.sender,
             collateral: msg.value,
             timestamp: block.timestamp
         });
-        delete preClaims[msg.sender];
         emit ClaimMade(_lostAddress, msg.sender, balance);
     }
 
@@ -142,7 +109,7 @@ contract Claimable is ERC20Basic, Ownable {
         Claim memory claim = claims[_lostAddress];
         require(claim.collateral != 0, "No claim found");
         require(claim.claimant == msg.sender);
-        require(claim.timestamp + claimPeriod <= block.timestamp); 
+        require(claim.timestamp + claimPeriod <= block.timestamp); //Double check this. I think the inequality should be this way around.
         address claimant = claim.claimant;
         delete claims[_lostAddress];
         claimant.transfer(claim.collateral);
