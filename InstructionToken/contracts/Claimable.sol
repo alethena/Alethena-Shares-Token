@@ -34,19 +34,19 @@ contract Claimable is ERC20Basic, Ownable {
     /** @param collateralRate Sets the collateral needed per share to file a claim */
     uint256 public collateralRate = 1 ether;
 
-    uint256 public claimPeriod = 1000*60*60*24*30; // In Milliseconds ;
-    uint256 public preClaimPeriod = 1000*60*60*24; // In Milliseconds ;
+    uint256 public claimPeriod = 60*60*24*30; // In seconds ;
+    uint256 public preClaimPeriod = 60*60*24; // In seconds ;
 
     mapping(address => Claim) public claims; // there can be at most one claim per address, here address is claimed address
     mapping(address => PreClaim) public preClaims; // there can be at most one preclaim per address, here address is claimer
 
 
     function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInDays) public onlyOwner() {
-        uint256 claimPeriodInMilliseconds = _claimPeriodInDays*1000*60*60*24;
+        uint256 claimPeriodInSeconds = _claimPeriodInDays*60*60*24;
         require(_collateralRate > 0);
         require(_claimPeriodInDays > 30); // must be at least 30 days
         collateralRate = _collateralRate;
-        claimPeriod = claimPeriodInMilliseconds;
+        claimPeriod = claimPeriodInSeconds;
     }
 
     event ClaimMade(address indexed _lostAddress, address indexed _claimant, uint256 _balance);
@@ -79,7 +79,7 @@ contract Claimable is ERC20Basic, Ownable {
             msghash: _hashedpackage,
             timestamp: block.timestamp
         });
-        //emit ClaimPrepared(msg.sender);
+        emit ClaimPrepared(msg.sender);
     }
 
     function validateClaim(address _lostAddress, bytes32 _nonce) private view returns (bool){
@@ -115,6 +115,14 @@ contract Claimable is ERC20Basic, Ownable {
 
     function getTimeStamp(address _lostAddress) public view returns (uint256){
         return claims[_lostAddress].timestamp;
+    }
+
+    function getPreClaimTimeStamp(address _claimerAddress) public view returns (uint256){
+        return preClaims[_claimerAddress].timestamp;
+    }
+
+    function getMsgHash(address _claimerAddress) public view returns (bytes32){
+        return preClaims[_claimerAddress].msghash;
     }
 
     /**

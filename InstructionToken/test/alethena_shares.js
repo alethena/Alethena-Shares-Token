@@ -134,9 +134,15 @@ it('should let OtherAddress1 make a preclaim on Shareholder1', async () => {
   // COMPUTE HASHED PACKAGE
   const nonce = web3utils.sha3('Best nonce ever');
   const package = web3utils.soliditySha3(nonce,OtherAddress1,Shareholder1);
-  await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress1});
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress1});
   let blockstamp = web3.eth.getBlock('latest').timestamp;
+  
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress1));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1)); 
 
+  //Test events
+  assert.equal(OtherAddress1, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
  
 });
 
@@ -149,12 +155,15 @@ it('should revert when OtherAddress1 tries to make the claim on Shareholder1 too
 });
 
 it('Increase time', async () => {
-  const timeIncrease = 1000*60*60*24+5; //24 hours, ms, s, m, h, d
+  const timeIncrease = 60*60*24+5; //24 hours, s, m, h, d
   await helpers.increaseTime(timeIncrease);
 });
 
 it('should revert when OtherAddress1 tries to make the claim on Shareholder1 with the wrong nonce', async () => {
   const nonce = web3utils.sha3('Worst nonce ever');
+
+
+  
   const Shareholder1Balance = await AlethenaSharesInstance.balanceOf(Shareholder1);
   const Collateral1 = Shareholder1Balance*10**18;
   await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder1, nonce, {from: OtherAddress1, value: Collateral1}));
@@ -197,68 +206,104 @@ it('should let OtherAddress1 make a claim on Shareholder1', async () => {
 
 });
 
+
+
+it('should reject clearing the claim on Shareholder1 before the waiting period is over', async () => {
+  await helpers.shouldRevert(AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1}));
+});
+
+it('Increase time', async () => {
+  const timeIncrease = 60*60*24*300; //300 days, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
+});
+
+it('should allow to resolve the claim on Shareholder1 after the waiting period is over', async () => {
+  //Record state before
+  const OtherAddress1Balance = await AlethenaSharesInstance.balanceOf(OtherAddress1);
+  const OtherAddress1EtherBalance = await web3.eth.getBalance(OtherAddress1);
+  const Collateral7 = await AlethenaSharesInstance.getCollateral(Shareholder1);
+  const Shareholder1BalanceBefore = await AlethenaSharesInstance.balanceOf(Shareholder1);
+
+  //Resolve the claim
+  const tx7 = await AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1});
+  const gasUsed7 = tx7.receipt.gasUsed;
+
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder1));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder1));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder1));
+
+  //Check that tokens were transferred
+  const OtherAddress1BalanceAfter = await AlethenaSharesInstance.balanceOf(OtherAddress1)  
+  assert.equal(OtherAddress1Balance.plus(Shareholder1BalanceBefore).toString(),OtherAddress1BalanceAfter.toString());
+  assert.equal(0,await AlethenaSharesInstance.balanceOf(Shareholder1));
+
+  //Give collateral back
+  const txCost7 =gasPrice*gasUsed7; 
+  BalShouldBe = OtherAddress1EtherBalance.plus(Collateral7).minus(txCost7).toString();
+  BalIs = await web3.eth.getBalance(OtherAddress1).toString();  
+  assert.equal(BalIs,BalShouldBe);
+});
+
 // THE TESTS BELOW THIS LINE STILL NEED TO BE ADJUSTED TO INCLUDE THE COMMIT REVEAL SCHEME
 
+it('should let OtherAddress1 make a preclaim on Shareholder2', async () => {
+  // COMPUTE HASHED PACKAGE
+  const nonce = web3utils.sha3('Even better nonce');
+  const package = web3utils.soliditySha3(nonce,OtherAddress1,Shareholder2);
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress1});
+  let blockstamp = web3.eth.getBlock('latest').timestamp;
+  
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress1));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1)); 
+
+  //Test events
+  assert.equal(OtherAddress1, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
+ 
+});
+
+
 // ---------------------------------------------------------------------------------------
+it("should revert if a claim doesn't have enough funding", async () => {
+  const nonce = web3utils.sha3('Even better nonce');
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2, nonce,{from: OtherAddress1, value: 10*10**18}));
+});
 
-// it('should reject clearing the claim on Shareholder1 before the waiting period is over', async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1}));
-// });
+it("should revert if target address has zero balance", async () => {
+  const nonce = web3utils.sha3('Even better nonce');
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Tokenholder3, nonce,{from: OtherAddress1, value: 10*10**18}));
+});
 
-// it('Increase time', async () => {
-//   const timeIncrease = 1000*60*60*24*300; //300 days, ms, s, m, h, d
-//   await helpers.increaseTime(timeIncrease);
-// });
+it('should let OtherAddress2 make a preclaim on Shareholder2', async () => {
+  // COMPUTE HASHED PACKAGE
+  const nonce = web3utils.sha3('Wow that nonce');
+  const package = web3utils.soliditySha3(nonce,OtherAddress2,Shareholder2);
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress2});
+  let blockstamp = web3.eth.getBlock('latest').timestamp;
+  
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress2));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress2)); 
 
-// it('should allow to resolve the claim on Shareholder1 after the waiting period is over', async () => {
-//   //Record state before
-//   const OtherAddress1Balance = await AlethenaSharesInstance.balanceOf(OtherAddress1);
-//   const OtherAddress1EtherBalance = await web3.eth.getBalance(OtherAddress1);
-//   const Collateral7 = await AlethenaSharesInstance.getCollateral(Shareholder1);
-//   const Shareholder1BalanceBefore = await AlethenaSharesInstance.balanceOf(Shareholder1);
+  //Test events
+  assert.equal(OtherAddress2, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
+ 
+});
 
-//   //Resolve the claim
-//   const tx7 = await AlethenaSharesInstance.resolveClaim(Shareholder1,{from: OtherAddress1});
-//   const gasUsed7 = tx7.receipt.gasUsed;
-
-//   //Check that struct was deleted
-//   assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder1));
-//   assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder1));
-//   assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder1));
-
-//   //Check that tokens were transferred
-//   const OtherAddress1BalanceAfter = await AlethenaSharesInstance.balanceOf(OtherAddress1)  
-//   assert.equal(OtherAddress1Balance.plus(Shareholder1BalanceBefore).toString(),OtherAddress1BalanceAfter.toString());
-//   assert.equal(0,await AlethenaSharesInstance.balanceOf(Shareholder1));
-
-//   //Give collateral back
-//   const txCost7 =gasPrice*gasUsed7; 
-//   BalShouldBe = OtherAddress1EtherBalance.plus(Collateral7).minus(txCost7).toString();
-//   BalIs = await web3.eth.getBalance(OtherAddress1).toString();  
-//   assert.equal(BalIs,BalShouldBe);
-// });
-
-// it("should revert if a claim doesn't have enough funding", async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress1, value: 10*10**18}));
-// });
-
-// it("should revert if target address has zero balance", async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Tokenholder3,{from: OtherAddress1, value: 10*10**18}));
-// });
-
-
-// it('should let OtherAddress2 make a claim on Shareholder2', async () => {
-//   console.log("Case 2: Malicious or accidental claim is made but cleared by a transaction".green);
-//   ShareHolder2Balance = await AlethenaSharesInstance.balanceOf(Shareholder2);
-//   Collateral2 = ShareHolder2Balance*10**18
-//   const tx4 = await AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress2, value: Collateral2});
+it('should let OtherAddress2 make a claim on Shareholder2', async () => {
+  console.log("Case 2: Malicious or accidental claim is made but cleared by a transaction".green);
+  const nonce = web3utils.sha3('Wow that nonce');
+  ShareHolder2Balance = await AlethenaSharesInstance.balanceOf(Shareholder2);
+  Collateral2 = ShareHolder2Balance*10**18;
+//   const tx4 = await AlethenaSharesInstance.declareLost(Shareholder2, nonce, {from: OtherAddress2, value: Collateral2});
 //   blockstamp =  web3.eth.getBlock('latest').timestamp;
 
 //   //Check that data in struct is correct
 //   assert.equal(OtherAddress2,await AlethenaSharesInstance.getClaimant(Shareholder2));
 //   assert.equal(Collateral2,await AlethenaSharesInstance.getCollateral(Shareholder2));
 //   assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
-// });
+});
 
 // it("should revert claim on Shareholder2 because target address is already claimed", async () => {
 //   await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress3, value: 10*10**18}));
