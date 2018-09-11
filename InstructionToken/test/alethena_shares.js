@@ -199,6 +199,10 @@ it('should let OtherAddress1 make a claim on Shareholder1', async () => {
   assert.equal(Collateral1,await AlethenaSharesInstance.getCollateral(Shareholder1));
   assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder1)); 
 
+  //Check that preClaim is deleted
+  assert.equal(0,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1));
+  assert.equal(0,await AlethenaSharesInstance.getMsgHash(OtherAddress1));
+
   //Test events
   assert.equal(Shareholder1, tx3.logs[0].args._lostAddress, 'Lost address is incorrect');
   assert.equal(OtherAddress1, tx3.logs[0].args._claimant, 'Claimant address is incorrect');
@@ -245,8 +249,6 @@ it('should allow to resolve the claim on Shareholder1 after the waiting period i
   assert.equal(BalIs,BalShouldBe);
 });
 
-// THE TESTS BELOW THIS LINE STILL NEED TO BE ADJUSTED TO INCLUDE THE COMMIT REVEAL SCHEME
-
 it('should let OtherAddress1 make a preclaim on Shareholder2', async () => {
   // COMPUTE HASHED PACKAGE
   const nonce = web3utils.sha3('Even better nonce');
@@ -263,8 +265,6 @@ it('should let OtherAddress1 make a preclaim on Shareholder2', async () => {
  
 });
 
-
-// ---------------------------------------------------------------------------------------
 it("should revert if a claim doesn't have enough funding", async () => {
   const nonce = web3utils.sha3('Even better nonce');
   await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2, nonce,{from: OtherAddress1, value: 10*10**18}));
@@ -288,7 +288,12 @@ it('should let OtherAddress2 make a preclaim on Shareholder2', async () => {
 
   //Test events
   assert.equal(OtherAddress2, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
- 
+
+});
+
+it('Increase time', async () => {
+  const timeIncrease = 60*60*24+5; //24 hours, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
 });
 
 it('should let OtherAddress2 make a claim on Shareholder2', async () => {
@@ -296,226 +301,295 @@ it('should let OtherAddress2 make a claim on Shareholder2', async () => {
   const nonce = web3utils.sha3('Wow that nonce');
   ShareHolder2Balance = await AlethenaSharesInstance.balanceOf(Shareholder2);
   Collateral2 = ShareHolder2Balance*10**18;
-//   const tx4 = await AlethenaSharesInstance.declareLost(Shareholder2, nonce, {from: OtherAddress2, value: Collateral2});
-//   blockstamp =  web3.eth.getBlock('latest').timestamp;
+  const tx4 = await AlethenaSharesInstance.declareLost(Shareholder2, nonce, {from: OtherAddress2, value: Collateral2});
+  blockstamp =  web3.eth.getBlock('latest').timestamp;
 
-//   //Check that data in struct is correct
-//   assert.equal(OtherAddress2,await AlethenaSharesInstance.getClaimant(Shareholder2));
-//   assert.equal(Collateral2,await AlethenaSharesInstance.getCollateral(Shareholder2));
-//   assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
+  // Check that data in struct is correct
+  assert.equal(OtherAddress2,await AlethenaSharesInstance.getClaimant(Shareholder2));
+  assert.equal(Collateral2,await AlethenaSharesInstance.getCollateral(Shareholder2));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
 });
 
-// it("should revert claim on Shareholder2 because target address is already claimed", async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2,{from: OtherAddress3, value: 10*10**18}));
-// });
 
-// it('should clear claim on OtherAddress2 after a transaction', async () => {
-//   var tx5 = await AlethenaSharesInstance.transfer(Tokenholder2,5,{from: Shareholder2});
+it('should let OtherAddress3 make a preclaim on Shareholder2', async () => {
+  // COMPUTE HASHED PACKAGE
+  const nonce = web3utils.sha3('Even better nonce 2');
+  const package = web3utils.soliditySha3(nonce,OtherAddress3,Shareholder2);
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress3});
+  let blockstamp = web3.eth.getBlock('latest').timestamp;
   
-//   //Check that struct was deleted
-//   assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder2));
-//   assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder2));
-//   assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
-// });
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3)); 
 
-// it('should let OtherAddress3 make a claim on Shareholder3', async () => {
-//   console.log("Case 3: A claim is made but deleted by the owner of the contract".green);
-//   let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
-//   Collateral3 = ShareHolder3Balance*10**18
-//   await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
-//   blockstamp =  web3.eth.getBlock('latest').timestamp;
-
-//   //Check that data in struct is correct
-//   assert.equal(OtherAddress3,await AlethenaSharesInstance.getClaimant(Shareholder3));
-//   assert.equal(Collateral3,await AlethenaSharesInstance.getCollateral(Shareholder3));
-//   assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder3)); 
-// });
-
-// it('should revert when anyone other than the owner calls deleteClaim', async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Shareholder1}));
-// });
-
-// it('should delete claim on OtherAddress3 when triggered by owner of the contract', async () => {
-//   let OtherAddress3EtherBalance = await web3.eth.getBalance(OtherAddress3);
-//   await AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Owner});
-//   //Check that struct was deleted
-//   assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder3));
-//   assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder3));
-//   assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder3));
+  //Test events
+  assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
  
-//   let BalShouldBe = OtherAddress3EtherBalance.plus(Collateral3).toString();
-//   let BalIs = await web3.eth.getBalance(OtherAddress3).toString();
+});
 
-//   //Check that collateral was returned
-//   assert.equal(BalShouldBe,BalIs);
+it('Increase time', async () => {
+  const timeIncrease = 60*60*24+5; //24 hours, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
+});
 
-// });
+it("should revert claim on Shareholder2 because target address is already claimed", async () => {
+  const nonce = web3utils.sha3('Even better nonce 2');
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder2, nonce ,{from: OtherAddress3, value: 10*10**18}));
+});
 
-// it('should let OtherAddress3 make a claim again on Shareholder3', async () => {
-//   console.log("Case 4: A claim is made but cleared by owner of claimed address".green);
-//   ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
-//   Collateral3 = ShareHolder3Balance*10**18
-//   await AlethenaSharesInstance.declareLost(Shareholder3,{from: OtherAddress3, value: Collateral3});
-//   blockstamp =  web3.eth.getBlock('latest').timestamp;
-
-//   //Check that data in struct is correct
-//   assert.equal(OtherAddress3,await AlethenaSharesInstance.getClaimant(Shareholder3));
-//   assert.equal(Collateral3,await AlethenaSharesInstance.getCollateral(Shareholder3));
-//   assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder3)); 
-// });
-
-
-// it('should clear the claim on OtherAddress3 when triggered by the owner of the claimed address', async () => {
-//   let Shareholder3EtherBalance = await web3.eth.getBalance(Shareholder3);
-//   const tx6 = await AlethenaSharesInstance.clearClaim({from: Shareholder3});
-//   const gasUsed = tx6.receipt.gasUsed;
-
-//   //Check that struct was deleted
-//   assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder3));
-//   assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder3));
-//   assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder3));
+it('should clear claim on OtherAddress2 after a transaction', async () => {
+  var tx5 = await AlethenaSharesInstance.transfer(Tokenholder2,5,{from: Shareholder2});
   
-//   //Check that collateral is payed out correctly - have to account for transaction cost
-//   const txCost =gasPrice*gasUsed; 
-//   BalShouldBe = Shareholder3EtherBalance.plus(Collateral3).minus(txCost).toString();
-//   BalIs = await web3.eth.getBalance(Shareholder3).toString();  
-//   assert.equal(BalIs,BalShouldBe);
-// });
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder2));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder2));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder2)); 
+});
 
-// it('should unmint correctly from the owner account', async () => {
-//   console.log("Testing the unmint function".green);
-//   await AlethenaSharesInstance.unmint(5,'Maybe we have done a capital decrease or smth.',{from: Owner});
-// });
-
-// it('should not let anyone other than the owner of the contract unmint', async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.unmint(5,'Maybe I just want to mess with the company.',{from: Tokenholder1}));
-// });
-
-// it('should let the contract owner set the claim parameters', async () => {
-//   console.log("Testing the setters for all parameters".green);
-//   const newCollateralRate = 5*10**18;
-//   const tx7 = await AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Owner});
-
-//   //Make sure change happened
-//   assert.equal(await AlethenaSharesInstance.collateralRate(),newCollateralRate);
-
-//   // there are no events to check
-// });
-
-// it('should not let anyone other than the owner set claim parameters', async () => {
-//   const newCollateralRate = 5*10**18;
-//   await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Shareholder1}));
-// });
-
-// it('should revert when claim parameters to be set are out of range', async () => {
-//   const newCollateralRate = 5*10**18;
-//   await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
-//   await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
-// });
-
-// it('should let the contract owner set the number of shares', async () => {
-//   const newTotalShareNumber = 1500;
-//   await AlethenaSharesInstance.setTotalShares(newTotalShareNumber, {from: Owner});
-
-//   //Make sure change happened
-//   assert.equal(await AlethenaSharesInstance.totalShares(),newTotalShareNumber);
-
-//   // there are no events to check
-// });
-
-// it('should revert when totalSupply exceeds no. of shares', async () => {
-//   await helpers.shouldRevert(AlethenaSharesInstance.setTotalShares(50, {from: Owner}));
-// });
-
-// // it('should only alow transfers of integer amounts of tokens', async () => {
-// //   await helpers.shouldRevert(AlethenaSharesInstance.transfer(Shareholder1,5.5,{from: Shareholder2}));
-// // });
-
-// it('should implement implement the approval function correctly', async () => {
-//   console.log('Testing standard ERC20 functionality'.green);
-//   const approvalBefore = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
-//   const tx9 = await AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1});
-//   const approvalAfter = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
-//   // Check approval happened
-//   assert.equal(approvalBefore.plus(1).toString(),approvalAfter.toString())
-
-//   // Check events:
-//   assert.equal(tx9.logs[0].event,'Approval');
-//   assert.equal(tx9.logs[0].args.approver,OtherAddress1);
-//   assert.equal(tx9.logs[0].args.spender,OtherAddress2);
-//   assert.equal(tx9.logs[0].args.value,1);
-// });
-
-// it('should implement implement the increaseApproval function correctly', async () => {
-//   const approvalBefore1 = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
-//   const tx10 = await AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1});
-//   const approvalAfter1 = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+it('should let OtherAddress3 make a preclaim on Shareholder3', async () => {
+  // COMPUTE HASHED PACKAGE
+  const nonce = web3utils.sha3('Even better nonce 3');
+  const package = web3utils.soliditySha3(nonce,OtherAddress3,Shareholder3);
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress3});
+  let blockstamp = web3.eth.getBlock('latest').timestamp;
   
-//   // Check approval happened
-//   assert.equal(approvalBefore1.plus(2).toString(),approvalAfter1.toString())
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3)); 
 
-//   // Check events:
-//   assert.equal(tx10.logs[0].event,'Approval');
-//   assert.equal(tx10.logs[0].args.approver,OtherAddress1);
-//   assert.equal(tx10.logs[0].args.spender,OtherAddress2);
-//   assert.equal(tx10.logs[0].args.value,3);
-// });
+  //Test events
+  assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
+ 
+});
 
-// it('should implement implement the transferFrom function correctly', async () => {
-//   const beforeTransferFrom1 = await AlethenaSharesInstance.balanceOf(OtherAddress1);
-//   const beforeTransferFrom2 = await AlethenaSharesInstance.balanceOf(OtherAddress2);
-//   const beforeTransferFrom3 = await AlethenaSharesInstance.balanceOf(OtherAddress3);
+it('Increase time', async () => {
+  const timeIncrease = 60*60*24+5; //24 hours, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
+});
 
-//   const tx12 = await AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2});
+
+it('should let OtherAddress3 make a claim on Shareholder3', async () => {
+  console.log("Case 3: A claim is made but deleted by the owner of the contract".green);
+  let ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
+  Collateral3 = ShareHolder3Balance*10**18
+  const nonce = web3utils.sha3('Even better nonce 3');
+  await AlethenaSharesInstance.declareLost(Shareholder3, nonce,{from: OtherAddress3, value: Collateral3});
+  blockstamp =  web3.eth.getBlock('latest').timestamp;
+
+  //Check that data in struct is correct
+  assert.equal(OtherAddress3,await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(Collateral3,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder3)); 
+});
+
+it('should revert when anyone other than the owner calls deleteClaim', async () => {
+  await helpers.shouldRevert(AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Shareholder1}));
+});
+
+it('should delete claim on OtherAddress3 when triggered by owner of the contract', async () => {
+  let OtherAddress3EtherBalance = await web3.eth.getBalance(OtherAddress3);
+  await AlethenaSharesInstance.deleteClaim(Shareholder3,{from: Owner});
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder3));
+ 
+  let BalShouldBe = OtherAddress3EtherBalance.plus(Collateral3).toString();
+  let BalIs = await web3.eth.getBalance(OtherAddress3).toString();
+
+  //Check that collateral was returned
+  assert.equal(BalShouldBe,BalIs);
+
+});
+
+it('should let OtherAddress3 make a preclaim again on Shareholder3', async () => {
+  console.log("Case 4: A claim is made but cleared by owner of claimed address".green);
+
+  // COMPUTE HASHED PACKAGE
+  const nonce = web3utils.sha3('Even better nonce 3');
+  const package = web3utils.soliditySha3(nonce,OtherAddress3,Shareholder3);
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress3});
+  let blockstamp = web3.eth.getBlock('latest').timestamp;
   
-//   const afterTransferFrom1 = await AlethenaSharesInstance.balanceOf(OtherAddress1);
-//   const afterTransferFrom2 = await AlethenaSharesInstance.balanceOf(OtherAddress2);
-//   const afterTransferFrom3 = await AlethenaSharesInstance.balanceOf(OtherAddress3);
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3)); 
 
-//   // Check transfer happened
-//   assert.equal(beforeTransferFrom1.minus(1).toString(), afterTransferFrom1);
-//   assert.equal(beforeTransferFrom2.toString(), afterTransferFrom2);
-//   assert.equal(beforeTransferFrom3.plus(1).toString(), afterTransferFrom3);
+  //Test events
+  assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
+ 
+});
 
-//   // Check events:
-//   assert.equal(tx12.logs[0].event,'Transfer');
-//   assert.equal(tx12.logs[0].args.from,OtherAddress1);
-//   assert.equal(tx12.logs[0].args.to,OtherAddress3);
-//   assert.equal(tx12.logs[0].args.value,1);
+it('Increase time', async () => {
+  const timeIncrease = 60*60*24+5; //24 hours, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
+});
+
+it('should let OtherAddress3 make a claim again on Shareholder3', async () => {
+  const nonce = web3utils.sha3('Even better nonce 3');
+  ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
+  Collateral3 = ShareHolder3Balance*10**18
+  await AlethenaSharesInstance.declareLost(Shareholder3, nonce,{from: OtherAddress3, value: Collateral3});
+  blockstamp =  web3.eth.getBlock('latest').timestamp;
+
+  //Check that data in struct is correct
+  assert.equal(OtherAddress3,await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(Collateral3,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(blockstamp,await AlethenaSharesInstance.getTimeStamp(Shareholder3)); 
+});
+
+
+it('should clear the claim on OtherAddress3 when triggered by the owner of the claimed address', async () => {
+  let Shareholder3EtherBalance = await web3.eth.getBalance(Shareholder3);
+  const tx6 = await AlethenaSharesInstance.clearClaim({from: Shareholder3});
+  const gasUsed = tx6.receipt.gasUsed;
+
+  //Check that struct was deleted
+  assert.equal('0x0000000000000000000000000000000000000000',await AlethenaSharesInstance.getClaimant(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getCollateral(Shareholder3));
+  assert.equal(0,await AlethenaSharesInstance.getTimeStamp(Shareholder3));
+  
+  //Check that collateral is payed out correctly - have to account for transaction cost
+  const txCost =gasPrice*gasUsed; 
+  BalShouldBe = Shareholder3EtherBalance.plus(Collateral3).minus(txCost).toString();
+  BalIs = await web3.eth.getBalance(Shareholder3).toString();  
+  assert.equal(BalIs,BalShouldBe);
+});
+
+it('should unmint correctly from the owner account', async () => {
+  console.log("Testing the unmint function".green);
+  await AlethenaSharesInstance.unmint(5,'Maybe we have done a capital decrease or smth.',{from: Owner});
+});
+
+it('should not let anyone other than the owner of the contract unmint', async () => {
+  await helpers.shouldRevert(AlethenaSharesInstance.unmint(5,'Maybe I just want to mess with the company.',{from: Tokenholder1}));
+});
+
+it('should let the contract owner set the claim parameters', async () => {
+  console.log("Testing the setters for all parameters".green);
+  const newCollateralRate = 5*10**18;
+  const tx7 = await AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Owner});
+
+  //Make sure change happened
+  assert.equal(await AlethenaSharesInstance.collateralRate(),newCollateralRate);
+
+  // there are no events to check
+});
+
+it('should not let anyone other than the owner set claim parameters', async () => {
+  const newCollateralRate = 5*10**18;
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Shareholder1}));
+});
+
+it('should revert when claim parameters to be set are out of range', async () => {
+  const newCollateralRate = 5*10**18;
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
+});
+
+it('should let the contract owner set the number of shares', async () => {
+  const newTotalShareNumber = 1500;
+  await AlethenaSharesInstance.setTotalShares(newTotalShareNumber, {from: Owner});
+
+  //Make sure change happened
+  assert.equal(await AlethenaSharesInstance.totalShares(),newTotalShareNumber);
+
+  // there are no events to check
+});
+
+it('should revert when totalSupply exceeds no. of shares', async () => {
+  await helpers.shouldRevert(AlethenaSharesInstance.setTotalShares(50, {from: Owner}));
+});
+
+// it('should only alow transfers of integer amounts of tokens', async () => {
+//   await helpers.shouldRevert(AlethenaSharesInstance.transfer(Shareholder1,5.5,{from: Shareholder2}));
 // });
 
-// it('should only let the owner execute the pause function', async () => {
-//   console.log("Check that pause works".green);
-//   await helpers.shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
-// });
+it('should implement implement the approval function correctly', async () => {
+  console.log('Testing standard ERC20 functionality'.green);
+  const approvalBefore = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  const tx9 = await AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1});
+  const approvalAfter = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  // Check approval happened
+  assert.equal(approvalBefore.plus(1).toString(),approvalAfter.toString())
 
-// it('pause the contract', async () => {
-//   const pauseMessage = 'Keep calm and carry on with new contract xyz';
-//   const tx8 = await AlethenaSharesInstance.pause(true, pauseMessage,{from: Owner});
+  // Check events:
+  assert.equal(tx9.logs[0].event,'Approval');
+  assert.equal(tx9.logs[0].args.approver,OtherAddress1);
+  assert.equal(tx9.logs[0].args.spender,OtherAddress2);
+  assert.equal(tx9.logs[0].args.value,1);
+});
 
-//   //Check events:
-//   assert.equal(tx8.logs[0].event,'Pause');
-//   assert.equal(tx8.logs[0].args.paused,true);
-//   assert.equal(tx8.logs[0].args.message,pauseMessage);
-// });
+it('should implement implement the increaseApproval function correctly', async () => {
+  const approvalBefore1 = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  const tx10 = await AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1});
+  const approvalAfter1 = await AlethenaSharesInstance.allowance(OtherAddress1,OtherAddress2);
+  
+  // Check approval happened
+  assert.equal(approvalBefore1.plus(2).toString(),approvalAfter1.toString())
 
-// it('should revert on user actions if contract is paused', async () => {
-//   // Call all functions here and make sure they work without pause
-//   await helpers.shouldRevert(AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2}));
-//   await helpers.shouldRevert(AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1}));
-//   await helpers.shouldRevert(AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1}));
-//   await helpers.shouldRevert(AlethenaSharesInstance.transfer(OtherAddress2,1,{from: OtherAddress1}));
-// });
+  // Check events:
+  assert.equal(tx10.logs[0].event,'Approval');
+  assert.equal(tx10.logs[0].args.approver,OtherAddress1);
+  assert.equal(tx10.logs[0].args.spender,OtherAddress2);
+  assert.equal(tx10.logs[0].args.value,3);
+});
 
-// it('unpause the contract', async () => {
-//   const unpauseMessage = 'Keep calm and carry on with this contract';
-//   const tx11 = await AlethenaSharesInstance.pause(false, unpauseMessage,{from: Owner});
+it('should implement implement the transferFrom function correctly', async () => {
+  const beforeTransferFrom1 = await AlethenaSharesInstance.balanceOf(OtherAddress1);
+  const beforeTransferFrom2 = await AlethenaSharesInstance.balanceOf(OtherAddress2);
+  const beforeTransferFrom3 = await AlethenaSharesInstance.balanceOf(OtherAddress3);
 
-//   //Check events:
-//   assert.equal(tx11.logs[0].event,'Pause');
-//   assert.equal(tx11.logs[0].args.paused,false);
-//   assert.equal(tx11.logs[0].args.message,unpauseMessage);
-// });
+  const tx12 = await AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2});
+  
+  const afterTransferFrom1 = await AlethenaSharesInstance.balanceOf(OtherAddress1);
+  const afterTransferFrom2 = await AlethenaSharesInstance.balanceOf(OtherAddress2);
+  const afterTransferFrom3 = await AlethenaSharesInstance.balanceOf(OtherAddress3);
+
+  // Check transfer happened
+  assert.equal(beforeTransferFrom1.minus(1).toString(), afterTransferFrom1);
+  assert.equal(beforeTransferFrom2.toString(), afterTransferFrom2);
+  assert.equal(beforeTransferFrom3.plus(1).toString(), afterTransferFrom3);
+
+  // Check events:
+  assert.equal(tx12.logs[0].event,'Transfer');
+  assert.equal(tx12.logs[0].args.from,OtherAddress1);
+  assert.equal(tx12.logs[0].args.to,OtherAddress3);
+  assert.equal(tx12.logs[0].args.value,1);
+});
+
+it('should only let the owner execute the pause function', async () => {
+  console.log("Check that pause works".green);
+  await helpers.shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
+});
+
+it('pause the contract', async () => {
+  const pauseMessage = 'Keep calm and carry on with new contract xyz';
+  const tx8 = await AlethenaSharesInstance.pause(true, pauseMessage,{from: Owner});
+
+  //Check events:
+  assert.equal(tx8.logs[0].event,'Pause');
+  assert.equal(tx8.logs[0].args.paused,true);
+  assert.equal(tx8.logs[0].args.message,pauseMessage);
+});
+
+it('should revert on user actions if contract is paused', async () => {
+  // Call all functions here and make sure they work without pause
+  await helpers.shouldRevert(AlethenaSharesInstance.transferFrom(OtherAddress1,OtherAddress3,1,{from: OtherAddress2}));
+  await helpers.shouldRevert(AlethenaSharesInstance.approve(OtherAddress2,1,{from: OtherAddress1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.increaseApproval(OtherAddress2,2,{from: OtherAddress1}));
+  await helpers.shouldRevert(AlethenaSharesInstance.transfer(OtherAddress2,1,{from: OtherAddress1}));
+});
+
+it('unpause the contract', async () => {
+  const unpauseMessage = 'Keep calm and carry on with this contract';
+  const tx11 = await AlethenaSharesInstance.pause(false, unpauseMessage,{from: Owner});
+
+  //Check events:
+  assert.equal(tx11.logs[0].event,'Pause');
+  assert.equal(tx11.logs[0].args.paused,false);
+  assert.equal(tx11.logs[0].args.message,unpauseMessage);
+});
 
 
 });
