@@ -56,7 +56,7 @@ To interact with contract:
 
 geth console --rinkeby
 
-On rinkeby use var InstructionToken = web3.eth.contract(abiArray)
+On rinkeby use var AlethenaShares = web3.eth.contract(abiArray)
 where for abiArray the "[]" needs to be included (see ABICopy file)
 
 Create and unlock user accounts, then go ahead with the commands as in the tests.
