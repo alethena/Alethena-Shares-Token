@@ -1,6 +1,6 @@
 # Instruction-Token
 This is the smart contract code for the Alethena shares contract, an ERC20 token intended to make shares tradeable on the blockchain.
-It is based on the open-zeppelin library. The key difference is that tokens on lost addresses can be recovered.
+It is based on the open-zeppelin library. We call it the INSTRUCTION-TOKEN. The key difference is that tokens on lost addresses can be recovered.
 
 Assume Alice lost the key to her address A which she was using to hold ATH shares.
 To revcover the shares, she can do the following:
