@@ -1,4 +1,4 @@
-# Instruction-Token
+# Alethena-Share-Token
 This is the smart contract code for the Alethena shares contract, an ERC20 token intended to make shares tradeable on the blockchain.
 It is based on the open-zeppelin library. The key difference is that tokens on lost addresses can be recovered.
 
