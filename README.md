@@ -5,19 +5,19 @@ It is based on the open-zeppelin library. The key difference is that tokens on l
 Assume Alice lost the key to her address A which she was using to hold ATH shares.
 To revcover the shares, she can do the following:
 
-1. From an address B, she calls the 'prepareClaim' function and submits a package cosisting of the hash of the string concatenation of 
+1. From an address B, she calls the `prepareClaim` function and submits a package cosisting of the hash of the string concatenation of 
     `a nonce`,
     `address B`,
     `address A`.
 
-The hashed package (along with a timestamp) gets stored as a struct in a mapping with key 'address B'.
+The hashed package (along with a timestamp) gets stored as a struct in a mapping with key `address B`.
 
 2. After waiting sufficiently long (as defined by the preClaimPeriod), Alice will call the 'claimLost' function with the following arguments:
     `address A`,
     `the nonce used in step 1`.
 Furthermore, in this function call she needs to send a sufficient amount of ether to be used as collateral (as defined by the collateralRate).
 
-3. Again after waiting for a while, this time defined by 'claimPeriod', Alice gets her shares back by calling the function 'resolveClaim'.
+3. Again after waiting for a while, this time defined by `claimPeriod`, Alice gets her shares back by calling the function 'resolveClaim'.
 This will transfer the tokens from address A to address B and return the ether collateral back to Alice.
 
 There can only be one claim per address at a time. To prevent frontrunning, the commit reveal mechanism was employed.
