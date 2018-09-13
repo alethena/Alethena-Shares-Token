@@ -12,7 +12,7 @@ To revcover the shares, she can do the following:
 
 The hashed package (along with a timestamp) gets stored as a struct in a mapping with key `address B`.
 
-2. After waiting sufficiently long (as defined by the preClaimPeriod), Alice will call the 'claimLost' function with the following arguments:
+2. After waiting sufficiently long (as defined by the preClaimPeriod), Alice will call the `claimLost` function with the following arguments:
     `address A`,
     `the nonce used in step 1`.
 Furthermore, in this function call she needs to send a sufficient amount of ether to be used as collateral (as defined by the collateralRate).
