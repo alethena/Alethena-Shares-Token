@@ -1,30 +1,46 @@
-/*
- * NB: since truffle-hdwallet-provider 0.0.5 you must wrap HDWallet providers in a 
- * function when declaring them. Failure to do so will cause commands to hang. ex:
- * ```
- * mainnet: {
- *     provider: function() { 
- *       return new HDWalletProvider(mnemonic, 'https://mainnet.infura.io/<infura-key>') 
- *     },
- *     network_id: '1',
- *     gas: 4500000,
- *     gasPrice: 10000000000,
- *   },
- */
+var HDWalletProvider = require("truffle-hdwallet-provider-privkey");
+
+const privKey = ["NOPE"];
 
 module.exports = {
   networks: {
-  development: {
-  host: 'localhost',
-  port: 7545,
-  network_id: '5777' // Match any network id
-  }//,
-  // rinkeby: {
-  //   host: "localhost", // Connect to geth on the specified
-  //   port: 8545,
-  //   from: "0x52f361c8bb891978aafd864b3d3761fce24ed956", // default address to use for any transaction Truffle makes during migrations
-  //   network_id: 4,
-  //   gas: 4612388 // Gas limit used for deploys
-  // }
+    development: {
+      host: 'localhost',
+      port: 7545,
+      network_id: '*' // Match any network id
+    },
+    // testnets
+    // properties
+    // network_id: identifier for network based on ethereum blockchain. Find out more at https://github.com/ethereumbook/ethereumbook/issues/110
+    // gas: gas limit
+    // gasPrice: gas price in gwei
+    ropsten: {
+      provider: () => new HDWalletProvider(mnemonic, "https://ropsten.infura.io/v3/"),
+      network_id: 3,
+      gas: 3000000,
+      gasPrice: 21
+    },
+    kovan: {
+      provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://kovan.infura.io/v3/" + process.env.INFURA_API_KEY),
+      network_id: 42,
+      gas: 3000000,
+      gasPrice: 21
+    },
+    rinkeby: {
+      provider: () => {
+        return new HDWalletProvider(privKey, "https://rinkeby.infura.io/")
+      },
+      network_id: 4,
+      gas: 6612388, // Gas limit used for deploys
+      gasPrice: 2700000
+    },
+    // main ethereum network(mainnet)
+    main: {
+      provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY),
+      network_id: 1,
+      gas: 3000000,
+      gasPrice: 21
+    }
   }
-  }
+
+}

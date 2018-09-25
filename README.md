@@ -62,3 +62,21 @@ where for abiArray the "[]" needs to be included (see ABICopy file)
 Create and unlock user accounts, then go ahead with the commands as in the tests.
 
 The ABI tells you what functions are available and how to use them. 
+
+Deployed on rinkeby (transaction output below):
+
+Running migration: 1_initial_migration.js
+  Deploying Migrations...
+  ... 0x5f8b81b969dac0aab2dd7b5a767dd6e45286d3023843a2261f55a1049fc0eecb
+  Migrations: 0x5d03fdb6fb508ba94f6c3d5aa9d1805c5f2a1135
+Saving successful migration to network...
+  ... 0x6f3bee09f914059a85404c67f804b00f6fd169565baf0c0b7d6bbd14a30fc902
+Saving artifacts...
+Running migration: 2_deploy_contracts.js
+  Deploying AlethenaShares...
+  ... 0xe44b55ad6e338c58efd1a47f8df652ed3bf135affbef2af8fbaed86b69c9324c
+  AlethenaShares: 0x6351f1c2e6dea96c9c608aa21c89663a3b7ea88e
+Saving successful migration to network...
+  ... 0x80f79bdacb37da22155a9c4878c5d6fe53bcbe211860a0c1dd8dd1f5c1066919
+
+  Watch on etherscan: https://rinkeby.etherscan.io/address/0x6351f1c2e6dea96c9c608aa21c89663a3b7ea88e
