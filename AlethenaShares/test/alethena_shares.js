@@ -1,10 +1,8 @@
 //import expectThrow from './tools';
-'use-strict'
 const AlethenaShares = artifacts.require('./AlethenaShares.sol');
 const helpers = require('../utilities/helpers.js');
-
+//var Accounts  = require('../node_modules/web3-eth-accounts');
 var web3utils = require('web3-utils');
-
 
 contract('AlethenaShares', (accounts) => {
 
@@ -19,7 +17,13 @@ contract('AlethenaShares', (accounts) => {
   const OtherAddress1     = accounts[7]; // Used by Shareholder 1 to get back token
   const OtherAddress2     = accounts[8]; // Used to attack Shareholder2
   const OtherAddress3     = accounts[9]; // Used to attack Shareholder3
+  const Master            = "0x0e0a1a8daa228def4a4a8613b3e40aaf435d319e";
   
+  // For obvious reasons the following key will not be disclosed in the production version ;-P
+  const MasterKey         = "0x60D983AA17D2F806FE7EAC51444DCAF033756E1EF8D2E58303323C44AF9DA876";
+
+  //const MasterAccount = Accounts.privateKeyToAccount(MasterKey);
+
 
   // Amounts to be minted for users
   const mintOwner        = 100;
@@ -37,6 +41,7 @@ contract('AlethenaShares', (accounts) => {
   before(async () => {
       AlethenaSharesInstance = await AlethenaShares.deployed();
   });
+  
 
   it('should set basic info correctly', async () => {
     console.log("Sanity check: Basic information is correct".green);
@@ -63,14 +68,26 @@ contract('AlethenaShares', (accounts) => {
     assert.equal(SecondBalance, 0, 'Balance incorrect');
 });
 
+it('should have correct owner and master', async () => {
+  let owner = await AlethenaSharesInstance.owner();  
+  let master = await AlethenaSharesInstance.master(); 
+  assert.equal(Owner.toString(), owner, 'Owner incorrect');
+  assert.equal(Master.toString(), master, 'Master incorrect');
+});
+
+it('should revert when anyone other than master tries to change the owner', async () => {
+  await helpers.shouldRevert( AlethenaSharesInstance.transferOwnership(Shareholder1));
+});
+
   it('should mint correctly', async () => {
     console.log("Check the minting function(s)".green);
 
     const tx1 = await AlethenaSharesInstance.mint(Owner,mintOwner,'Testing mint');
-    const tx2 = await AlethenaSharesInstance.mintMany(
-      [Shareholder1, Shareholder2, Shareholder3],
-      [mintShareholder1, mintShareholder2, mintShareholder3],
-      'Testing batch mint');
+
+    let tx2 = await AlethenaSharesInstance.mint(Shareholder1,mintShareholder1,'Testing mint 1');
+    let tx3 = await AlethenaSharesInstance.mint(Shareholder2,mintShareholder2,'Testing mint 2');
+    let tx4 = await AlethenaSharesInstance.mint(Shareholder3,mintShareholder3,'Testing mint 3');
+   
 
     let OwnerBalance = await AlethenaSharesInstance.balanceOf(Owner);  
     let FirstBalance = await AlethenaSharesInstance.balanceOf(Shareholder1); 
@@ -97,17 +114,17 @@ contract('AlethenaShares', (accounts) => {
     assert.equal(tx2.logs[0].event,'Mint');
     assert.equal(tx2.logs[0].args.shareholder,Shareholder1);
     assert.equal(tx2.logs[0].args.amount,mintShareholder1);
-    assert.equal(tx2.logs[0].args.message,'Testing batch mint');
+    assert.equal(tx2.logs[0].args.message,'Testing mint 1');
 
-    assert.equal(tx2.logs[1].event,'Mint');
-    assert.equal(tx2.logs[1].args.shareholder,Shareholder2);
-    assert.equal(tx2.logs[1].args.amount,mintShareholder2);
-    assert.equal(tx2.logs[1].args.message,'Testing batch mint');
+    assert.equal(tx3.logs[0].event,'Mint');
+    assert.equal(tx3.logs[0].args.shareholder,Shareholder2);
+    assert.equal(tx3.logs[0].args.amount,mintShareholder2);
+    assert.equal(tx3.logs[0].args.message,'Testing mint 2');
 
-    assert.equal(tx2.logs[2].event,'Mint');
-    assert.equal(tx2.logs[2].args.shareholder,Shareholder3);
-    assert.equal(tx2.logs[2].args.amount,mintShareholder3);
-    assert.equal(tx2.logs[2].args.message,'Testing batch mint');
+    assert.equal(tx4.logs[0].event,'Mint');
+    assert.equal(tx4.logs[0].args.shareholder,Shareholder3);
+    assert.equal(tx4.logs[0].args.amount,mintShareholder3);
+    assert.equal(tx4.logs[0].args.message,'Testing mint 3');
 
 });
   
@@ -115,19 +132,21 @@ it('should only alow owner to mint', async () => {
   await helpers.shouldRevert(AlethenaSharesInstance.mint(Owner,mintOwner,'Testing mint',{from: Shareholder1}));
 });
 
-it('should only alow owner to batch mint', async () => {
-  await helpers.shouldRevert(AlethenaSharesInstance.mintMany(
-      [Shareholder1, Shareholder2, Shareholder3],
-      [mintShareholder1, mintShareholder2, mintShareholder3],
-      'Testing batch mint',{from: Shareholder1}));
-});
+// it('should only alow owner to batch mint', async () => {
+//   await helpers.shouldRevert(AlethenaSharesInstance.mintMany(
+//       [Shareholder1, Shareholder2, Shareholder3],
+//       [mintShareholder1, mintShareholder2, mintShareholder3],
+//       'Testing batch mint',{from: Shareholder1}));
+// });
 
-it('should check for array lengths in batch mint', async () => {
-  await helpers.shouldRevert(AlethenaSharesInstance.mintMany(
-      [Shareholder1, Shareholder2, Shareholder3],
-      [mintShareholder1, mintShareholder2],
-      'Testing batch mint',{from: Owner}));
-});
+// it('should check for array lengths in batch mint', async () => {
+//   await helpers.shouldRevert(AlethenaSharesInstance.mintMany(
+//       [Shareholder1, Shareholder2, Shareholder3],
+//       [mintShareholder1, mintShareholder2],
+//       'Testing batch mint',{from: Owner}));
+// });
+
+
 
 it('should let OtherAddress1 make a preclaim on Shareholder1', async () => {
   console.log("Case 1: Legitimate claim is made and resolved after waiting period".green);
@@ -135,7 +154,8 @@ it('should let OtherAddress1 make a preclaim on Shareholder1', async () => {
   const nonce = web3utils.sha3('Best nonce ever');
   const package = web3utils.soliditySha3(nonce,OtherAddress1,Shareholder1);
   const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress1});
-  let blockstamp = web3.eth.getBlock('latest').timestamp;
+  let blockstamp = await web3.eth.getBlock('latest').timestamp;
+  web3.eth
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress1));

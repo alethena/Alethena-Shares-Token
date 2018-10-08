@@ -47,13 +47,16 @@ contract Claimable is ERC20Basic, Ownable {
         require(_claimPeriodInDays > 30); // must be at least 30 days
         collateralRate = _collateralRate;
         claimPeriod = claimPeriodInSeconds;
+        emit ClaimParametersChanged(collateralRate, claimPeriod);
     }
 
     event ClaimMade(address indexed _lostAddress, address indexed _claimant, uint256 _balance);
     event ClaimPrepared(address indexed _claimer);
     event ClaimCleared(address indexed _lostAddress, uint256 collateral);
     event ClaimDeleted(address indexed _lostAddress, address indexed _claimant, uint256 collateral);
-    event ClaimResolved(address indexed _lostAddress, address indexed _claimant, uint256 collateral); 
+    event ClaimResolved(address indexed _lostAddress, address indexed _claimant, uint256 collateral);
+    event ClaimParametersChanged(uint256 _collateralRate, uint256  _claimPeriodInDays); 
+ 
   
   /** Anyone can declare that the private key to a certain address was lost by calling declareLost
     * providing a deposit/collateral. There are three possibilities of what can happen with the claim:

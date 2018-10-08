@@ -1,7 +1,7 @@
-var HDWalletProvider = require("truffle-hdwallet-provider-privkey");
+var HDWalletProvider = require("truffle-hdwallet-provider");
 
-const privKey = ["NOPE"];
-
+const privKey = Buffer.from('A84BE9B559ABE1EC663CF4A69CDCF05ABB628793ED53535D69FA2C410D3D1FF1');
+const mnemonic = 'modify rent major hazard curious strike swear struggle sweet educate finish inhale'
 module.exports = {
   networks: {
     development: {
@@ -28,7 +28,7 @@ module.exports = {
     },
     rinkeby: {
       provider: () => {
-        return new HDWalletProvider(privKey, "https://rinkeby.infura.io/")
+        return new HDWalletProvider(mnemonic, "https://www.rinkeby.infura.io/v3/e7ec903e54b9473598306368d84a517b")
       },
       network_id: 4,
       gas: 6612388, // Gas limit used for deploys
