@@ -1,7 +1,9 @@
 var HDWalletProvider = require("truffle-hdwallet-provider");
 
-const privKey = Buffer.from('A84BE9B559ABE1EC663CF4A69CDCF05ABB628793ED53535D69FA2C410D3D1FF1');
-const mnemonic = 'modify rent major hazard curious strike swear struggle sweet educate finish inhale'
+const secret = require('./secret.json');
+//const privKey = Buffer.from(secret.privKey);
+const mnemonic = secret.mnemonic;
+
 module.exports = {
   networks: {
     development: {
@@ -9,11 +11,8 @@ module.exports = {
       port: 7545,
       network_id: '*' // Match any network id
     },
-    // testnets
-    // properties
-    // network_id: identifier for network based on ethereum blockchain. Find out more at https://github.com/ethereumbook/ethereumbook/issues/110
-    // gas: gas limit
-    // gasPrice: gas price in gwei
+    
+
     ropsten: {
       provider: () => new HDWalletProvider(mnemonic, "https://ropsten.infura.io/v3/"),
       network_id: 3,
@@ -27,12 +26,11 @@ module.exports = {
       gasPrice: 21
     },
     rinkeby: {
-      provider: () => {
-        return new HDWalletProvider(mnemonic, "https://www.rinkeby.infura.io/v3/e7ec903e54b9473598306368d84a517b")
-      },
+      host: 'http://127.0.0.1',
+      port: 8545,
       network_id: 4,
       gas: 6612388, // Gas limit used for deploys
-      gasPrice: 2700000
+      gasPrice: 27
     },
     // main ethereum network(mainnet)
     main: {

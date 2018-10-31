@@ -180,9 +180,9 @@
   "sourceMap": "",
   "deployedSourceMap": "",
   "source": "pragma solidity ^0.4.24;\n\nimport \"./ERC20Basic.sol\";\n\n\n/**\n * @title ERC20 interface\n * @dev see https://github.com/ethereum/EIPs/issues/20\n */\ncontract ERC20 is ERC20Basic {\n    function allowance(address owner, address spender)\n        public view returns (uint256);\n\n    function transferFrom(address from, address to, uint256 value)\n        public returns (bool);\n\n    function approve(address spender, uint256 value) public returns (bool);\n    event Approval(\n    address indexed owner,\n    address indexed spender,\n    uint256 value\n    );\n}",
-  "sourcePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20.sol",
+  "sourcePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20.sol",
   "ast": {
-    "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20.sol",
+    "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20.sol",
     "exportedSymbols": {
       "ERC20": [
         1079
@@ -203,7 +203,7 @@
         "src": "0:24:2"
       },
       {
-        "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+        "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
         "file": "./ERC20Basic.sol",
         "id": 1039,
         "nodeType": "ImportDirective",
@@ -705,7 +705,7 @@
     "src": "0:547:2"
   },
   "legacyAST": {
-    "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20.sol",
+    "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20.sol",
     "exportedSymbols": {
       "ERC20": [
         1079
@@ -726,7 +726,7 @@
         "src": "0:24:2"
       },
       {
-        "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+        "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
         "file": "./ERC20Basic.sol",
         "id": 1039,
         "nodeType": "ImportDirective",
@@ -1233,5 +1233,5 @@
   },
   "networks": {},
   "schemaVersion": "2.0.1",
-  "updatedAt": "2018-10-08T14:34:16.805Z"
+  "updatedAt": "2018-10-31T07:33:14.859Z"
 }

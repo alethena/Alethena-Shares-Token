@@ -85,9 +85,9 @@
   "sourceMap": "",
   "deployedSourceMap": "",
   "source": "pragma solidity ^0.4.24;\n\n/**\n * @title ERC20Basic\n * @dev Simpler version of ERC20 interface\n * See https://github.com/ethereum/EIPs/issues/179\n */\ncontract ERC20Basic {\n    function totalSupply() public view returns (uint256);\n    function balanceOf(address who) public view returns (uint256);\n    function transfer(address to, uint256 value) public returns (bool);\n    event Transfer(address indexed from, address indexed to, uint256 value);\n}",
-  "sourcePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+  "sourcePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
   "ast": {
-    "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+    "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
     "exportedSymbols": {
       "ERC20Basic": [
         1111
@@ -472,7 +472,7 @@
     "src": "0:446:3"
   },
   "legacyAST": {
-    "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+    "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
     "exportedSymbols": {
       "ERC20Basic": [
         1111
@@ -862,5 +862,5 @@
   },
   "networks": {},
   "schemaVersion": "2.0.1",
-  "updatedAt": "2018-10-08T14:34:16.806Z"
+  "updatedAt": "2018-10-31T07:33:14.859Z"
 }

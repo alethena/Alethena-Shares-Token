@@ -561,9 +561,9 @@
   "sourceMap": "",
   "deployedSourceMap": "",
   "source": "pragma solidity ^0.4.24;\n\nimport \"./Ownable.sol\";\nimport \"./ERC20Basic.sol\";\n\n/**\n * @title Claimable\n * In case of tokens that represent real-world assets such as shares of a company, one needs a way\n * to handle lost private keys. With physical certificates, courts can declare share certificates as\n * invalid so the company can issue replacements. Here, we want a solution that does not depend on \n * third parties to resolve such cases. Instead, when someone has lost a private key, he can use the\n * declareLost function to post a deposit and claim that the shares assigned to a specific address are\n * lost. To prevent front running, a commit reveal scheme is used. If he actually is the owner of the shares,\n * he needs to wait for a certain period and can then reclaim the lost shares as well as the deposit. \n * If he is an attacker trying to claim shares belonging to someone else, he risks losing the deposit \n * as it can be claimed at anytime by the rightful owner.\n * Furthermore, the company itself can delete claims at any time and take the deposit. So in order to\n * use this functionality, one needs to trust the company to do the right thing and to handle potential\n * disputes responsibly. If you do not trust the company to do so, don't lose your private keys. :)\n */\ncontract Claimable is ERC20Basic, Ownable {\n\n    struct Claim {\n        address claimant; // the person who created the claim\n        uint256 collateral; // the amount of wei deposited\n        uint256 timestamp;  // the timestamp of the block in which the claim was made\n    }\n\n    struct PreClaim {\n        bytes32 msghash; // the hash of nonce + address to be claimed\n        uint256 timestamp;  // the timestamp of the block in which the preclaim was made\n    }\n\n    /** @param collateralRate Sets the collateral needed per share to file a claim */\n    uint256 public collateralRate = 1 ether;\n\n    uint256 public claimPeriod = 60*60*24*30; // In seconds ;\n    uint256 public preClaimPeriod = 60*60*24; // In seconds ;\n\n    mapping(address => Claim) public claims; // there can be at most one claim per address, here address is claimed address\n    mapping(address => PreClaim) public preClaims; // there can be at most one preclaim per address, here address is claimer\n\n\n    function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInDays) public onlyOwner() {\n        uint256 claimPeriodInSeconds = _claimPeriodInDays*60*60*24;\n        require(_collateralRate > 0);\n        require(_claimPeriodInDays > 30); // must be at least 30 days\n        collateralRate = _collateralRate;\n        claimPeriod = claimPeriodInSeconds;\n        emit ClaimParametersChanged(collateralRate, claimPeriod);\n    }\n\n    event ClaimMade(address indexed _lostAddress, address indexed _claimant, uint256 _balance);\n    event ClaimPrepared(address indexed _claimer);\n    event ClaimCleared(address indexed _lostAddress, uint256 collateral);\n    event ClaimDeleted(address indexed _lostAddress, address indexed _claimant, uint256 collateral);\n    event ClaimResolved(address indexed _lostAddress, address indexed _claimant, uint256 collateral);\n    event ClaimParametersChanged(uint256 _collateralRate, uint256  _claimPeriodInDays); \n \n  \n  /** Anyone can declare that the private key to a certain address was lost by calling declareLost\n    * providing a deposit/collateral. There are three possibilities of what can happen with the claim:\n    * 1) The claim period expires and the claimant can get the deposit and the shares back by calling resolveClaim\n    * 2) The \"lost\" private key is used at any time to call resolveClaim. In that case, the claim is deleted and\n    *    the deposit sent to the shareholder (the owner of the private key). It is recommended to call resolveClaim\n    *    whenever someone transfers funds to let claims be resolved automatically when the \"lost\" private key is\n    *    used again.\n    * 3) The owner deletes the claim and assigns the deposit to himself. This is intended to be used to resolve\n    *    disputes. Who is entitled to keep the deposit depends on the contractual agreements between the involved\n    *    parties and in particular the issuance terms. Generally, using this function implies that you have to trust\n    *    the issuer of the tokens to handle the situation well. As a rule of thumb, the contract owner should assume\n    *    the owner of the lost address to be the rightful owner of the deposit. \n    * It is highly recommended that the owner observes the claims made and informs the owners of the claimed addresses\n    * whenever a claim is made for their address (this of course is only possible if they are known to the owner, e.g.\n    * through a shareholder register).\n    * To prevent frontrunning attacks, a claim can only be made if the information revealed when calling \"claimLost\" \n    * was previously commited using the \"prepareClaim\" function. \n    */\n\n    function prepareClaim(bytes32 _hashedpackage) public{\n        preClaims[msg.sender] = PreClaim({ \n            msghash: _hashedpackage,\n            timestamp: block.timestamp\n        });\n        emit ClaimPrepared(msg.sender);\n    }\n\n    function validateClaim(address _lostAddress, bytes32 _nonce) private view returns (bool){\n        PreClaim memory preClaim = preClaims[msg.sender];\n        require(preClaim.msghash != 0);\n        require(preClaim.timestamp + preClaimPeriod <= block.timestamp);\n        return preClaim.msghash == keccak256(abi.encodePacked(_nonce, msg.sender, _lostAddress));\n    }\n\n    function declareLost(address _lostAddress, bytes32 _nonce) public payable{\n        uint256 balance = balanceOf(_lostAddress);\n        require(balance > 0);\n        require(msg.value >= balance*collateralRate);\n        require(claims[_lostAddress].collateral == 0);\n        require(validateClaim(_lostAddress, _nonce));\n\n        claims[_lostAddress] = Claim({\n            claimant: msg.sender,\n            collateral: msg.value,\n            timestamp: block.timestamp\n        });\n        delete preClaims[msg.sender];\n        emit ClaimMade(_lostAddress, msg.sender, balance);\n    }\n\n    function getClaimant(address _lostAddress) public view returns (address){\n        return claims[_lostAddress].claimant;\n    }\n\n    function getCollateral(address _lostAddress) public view returns (uint256){\n        return claims[_lostAddress].collateral;\n    }\n\n    function getTimeStamp(address _lostAddress) public view returns (uint256){\n        return claims[_lostAddress].timestamp;\n    }\n\n    function getPreClaimTimeStamp(address _claimerAddress) public view returns (uint256){\n        return preClaims[_claimerAddress].timestamp;\n    }\n\n    function getMsgHash(address _claimerAddress) public view returns (bytes32){\n        return preClaims[_claimerAddress].msghash;\n    }\n\n    /**\n     * Clears a claim after the key has been found again and assigns the collateral to the \"lost\" address.\n     */\n    function clearClaim() public returns (uint256){\n        uint256 collateral = claims[msg.sender].collateral;\n        if (collateral != 0){\n            delete claims[msg.sender];\n            msg.sender.transfer(collateral);\n            emit ClaimCleared(msg.sender, collateral);\n            return collateral;\n        } else {\n            return 0;\n        }\n    }\n    \n   /** \n    * @dev This function is used to resolve a claim.\n    * @dev A rightful owner can claim his address back.\n    * @dev Else, after waiting period address can be claimed.\n    * \n   */\n    function resolveClaim(address _lostAddress) public returns (uint256){\n        Claim memory claim = claims[_lostAddress];\n        require(claim.collateral != 0, \"No claim found\");\n        require(claim.claimant == msg.sender);\n        require(claim.timestamp + claimPeriod <= block.timestamp); \n        address claimant = claim.claimant;\n        delete claims[_lostAddress];\n        claimant.transfer(claim.collateral);\n        internalTransfer(_lostAddress, claimant, balanceOf(_lostAddress));\n        emit ClaimResolved(_lostAddress, claimant, claim.collateral);\n        return claim.collateral;\n    }\n\n    function internalTransfer(address _from, address _to, uint256 _value) internal;\n\n     /** @dev This function is to be executed by the owner only in case a dispute needs to be resolved manually. */\n    function deleteClaim(address _lostAddress) public onlyOwner(){\n        Claim memory claim = claims[_lostAddress];\n        require(claim.collateral != 0, \"No claim found\");\n        delete claims[_lostAddress];\n        claim.claimant.transfer(claim.collateral);\n        emit ClaimDeleted(_lostAddress, claim.claimant, claim.collateral);\n    }\n\n}",
-  "sourcePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/Claimable.sol",
+  "sourcePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/Claimable.sol",
   "ast": {
-    "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/Claimable.sol",
+    "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/Claimable.sol",
     "exportedSymbols": {
       "Claimable": [
         1036
@@ -584,7 +584,7 @@
         "src": "0:24:1"
       },
       {
-        "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/Ownable.sol",
+        "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/Ownable.sol",
         "file": "./Ownable.sol",
         "id": 529,
         "nodeType": "ImportDirective",
@@ -595,7 +595,7 @@
         "unitAlias": ""
       },
       {
-        "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+        "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
         "file": "./ERC20Basic.sol",
         "id": 530,
         "nodeType": "ImportDirective",
@@ -7308,7 +7308,7 @@
     "src": "0:8637:1"
   },
   "legacyAST": {
-    "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/Claimable.sol",
+    "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/Claimable.sol",
     "exportedSymbols": {
       "Claimable": [
         1036
@@ -7329,7 +7329,7 @@
         "src": "0:24:1"
       },
       {
-        "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/Ownable.sol",
+        "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/Ownable.sol",
         "file": "./Ownable.sol",
         "id": 529,
         "nodeType": "ImportDirective",
@@ -7340,7 +7340,7 @@
         "unitAlias": ""
       },
       {
-        "absolutePath": "/home/benjamin/Documents/GitHub/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
+        "absolutePath": "/home/benjamin/Documents/GitHub/Ethereum/Alethena-Shares-Token/AlethenaShares/contracts/ERC20Basic.sol",
         "file": "./ERC20Basic.sol",
         "id": 530,
         "nodeType": "ImportDirective",
@@ -14058,5 +14058,5 @@
   },
   "networks": {},
   "schemaVersion": "2.0.1",
-  "updatedAt": "2018-10-08T14:34:16.801Z"
+  "updatedAt": "2018-10-31T07:33:14.855Z"
 }

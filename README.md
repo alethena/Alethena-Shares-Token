@@ -54,7 +54,7 @@ To deploy on rinkeby, use truffle migrate --reset --compile-all --network rinkeb
 
 To interact with contract:
 
-geth console --rinkeby
+geth console --rinkeby --rpc --syncmode fast --rpcapi="db,eth,net,web3,personal,web3"
 
 On rinkeby use var AlethenaShares = web3.eth.contract(abiArray)
 where for abiArray the "[]" needs to be included (see ABICopy file)
@@ -63,6 +63,7 @@ Create and unlock user accounts, then go ahead with the commands as in the tests
 
 The ABI tells you what functions are available and how to use them. 
 
+To flatten: solidity_flattener AlethenaShares.sol
 Deployed on rinkeby (transaction output below):
 
 Running migration: 1_initial_migration.js

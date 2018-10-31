@@ -159,7 +159,8 @@ it('should let OtherAddress1 make a preclaim on Shareholder1', async () => {
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress1));
-  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1)); 
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1);
+  assert.equal(blockstamp,temp.toString()); 
 
   //Test events
   assert.equal(OtherAddress1, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
@@ -274,11 +275,12 @@ it('should let OtherAddress1 make a preclaim on Shareholder2', async () => {
   const nonce = web3utils.sha3('Even better nonce');
   const package = web3utils.soliditySha3(nonce,OtherAddress1,Shareholder2);
   const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress1});
-  let blockstamp = web3.eth.getBlock('latest').timestamp;
+  let blockstamp = await web3.eth.getBlock('latest').timestamp;
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress1));
-  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1)); 
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress1);
+  assert.equal(blockstamp,temp.toString()); 
 
   //Test events
   assert.equal(OtherAddress1, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
@@ -304,7 +306,8 @@ it('should let OtherAddress2 make a preclaim on Shareholder2', async () => {
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress2));
-  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress2)); 
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress2);
+  assert.equal(blockstamp,temp.toString()); 
 
   //Test events
   assert.equal(OtherAddress2, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
@@ -340,7 +343,8 @@ it('should let OtherAddress3 make a preclaim on Shareholder2', async () => {
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
-  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3)); 
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3);
+  assert.equal(blockstamp,temp.toString()); 
 
   //Test events
   assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
@@ -375,7 +379,8 @@ it('should let OtherAddress3 make a preclaim on Shareholder3', async () => {
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
-  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3)); 
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3);
+  assert.equal(blockstamp,temp.toString()); 
 
   //Test events
   assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
@@ -433,7 +438,8 @@ it('should let OtherAddress3 make a preclaim again on Shareholder3', async () =>
   
   //Check that data in struct is correct
   assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
-  assert.equal(blockstamp,await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3)); 
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3);
+  assert.equal(blockstamp,temp.toString()); 
 
   //Test events
   assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
