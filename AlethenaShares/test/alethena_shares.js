@@ -586,17 +586,23 @@ it('should implement implement the transferFrom function correctly', async () =>
 
 it('should only let the owner execute the pause function', async () => {
   console.log("Check that pause works".green);
-  await helpers.shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',{from: Tokenholder2}));
+  const newAddress = '0xC869ece8eA0bA2CE2E483C10a9b2a7e391956Ce6';
+  const fromBlock = 3456;
+  await helpers.shouldRevert(AlethenaSharesInstance.pause(true, 'Let me just pause here...',newAddress, fromBlock, {from: Tokenholder2}));
 });
 
 it('pause the contract', async () => {
   const pauseMessage = 'Keep calm and carry on with new contract xyz';
-  const tx8 = await AlethenaSharesInstance.pause(true, pauseMessage,{from: Owner});
+  const newAddress = '0xC869ece8eA0bA2CE2E483C10a9b2a7e391956Ce6'.toLowerCase();
+  const fromBlock = 3456;
+  const tx8 = await AlethenaSharesInstance.pause(true, pauseMessage, newAddress, fromBlock,{from: Owner});
 
   //Check events:
   assert.equal(tx8.logs[0].event,'Pause');
   assert.equal(tx8.logs[0].args.paused,true);
   assert.equal(tx8.logs[0].args.message,pauseMessage);
+  assert.equal(tx8.logs[0].args.newAddress,newAddress);
+  assert.equal(tx8.logs[0].args.fromBlock.toString(),fromBlock.toString());
 });
 
 it('should revert on user actions if contract is paused', async () => {
@@ -609,12 +615,14 @@ it('should revert on user actions if contract is paused', async () => {
 
 it('unpause the contract', async () => {
   const unpauseMessage = 'Keep calm and carry on with this contract';
-  const tx11 = await AlethenaSharesInstance.pause(false, unpauseMessage,{from: Owner});
+  const tx11 = await AlethenaSharesInstance.pause(false, unpauseMessage,'0x0000000000000000000000000000000000000000',0,{from: Owner});
 
   //Check events:
   assert.equal(tx11.logs[0].event,'Pause');
   assert.equal(tx11.logs[0].args.paused,false);
   assert.equal(tx11.logs[0].args.message,unpauseMessage);
+  assert.equal(tx11.logs[0].args.newAddress,'0x0000000000000000000000000000000000000000');
+  assert.equal(tx11.logs[0].args.fromBlock,0);
 });
 
 

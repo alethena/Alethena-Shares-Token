@@ -99,12 +99,12 @@ contract AlethenaShares is ERC20, Claimable {
    *  "wrong" forked contracts should be paused in their respective fork. Deciding which
    *  fork is the "right" one is up to the owner of the contract.
    */
-    function pause(bool _pause, string _message) public onlyOwner() {
+    function pause(bool _pause, string _message, address _newAddress, uint256 _fromBlock) public onlyOwner() {
         isPaused = _pause;
-        emit Pause(_pause, _message);
+        emit Pause(_pause, _message, _newAddress, _fromBlock);
     }
 
-    event Pause(bool paused, string message);
+    event Pause(bool paused, string message, address newAddress, uint fromBlock);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /** 

@@ -3,7 +3,7 @@ This is the smart contract code for the Alethena shares contract, an ERC20 token
 It is based on the open-zeppelin library. The key difference is that tokens on lost addresses can be recovered.
 
 Assume Alice lost the key to her address A which she was using to hold ATH shares.
-To revcover the shares, she can do the following:
+To recover the shares, she can do the following:
 
 1. From an address B, she calls the `prepareClaim` function and submits a package cosisting of the hash of the string concatenation of 
     `a nonce`,
