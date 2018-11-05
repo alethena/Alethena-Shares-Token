@@ -32,8 +32,8 @@ import "./Claimable.sol";
  */
 contract AlethenaShares is ERC20, Claimable {
 
-    string public constant name = "Alethena Shares";
-    string public constant symbol = "ATH";
+    string public constant name = "Alethena Equity";
+    string public constant symbol = "ALEQ";
     uint8 public constant decimals = 0; // legally, shares are not divisible
 
     using SafeMath for uint256;
@@ -63,7 +63,6 @@ contract AlethenaShares is ERC20, Claimable {
     function setTotalShares(uint256 _newTotalShares) public onlyOwner() {
         require(_newTotalShares >= totalSupply());
         totalShares_ = _newTotalShares;
-        // Do we need an event here????
     }
 
   /** Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */
