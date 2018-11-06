@@ -1,9 +1,5 @@
 var HDWalletProvider = require("truffle-hdwallet-provider");
 
-const secret = require('./secret.json');
-//const privKey = Buffer.from(secret.privKey);
-const mnemonic = secret.mnemonic;
-
 module.exports = {
   networks: {
     development: {

@@ -89,6 +89,7 @@ contract Claimable is ERC20Basic, Ownable {
         PreClaim memory preClaim = preClaims[msg.sender];
         require(preClaim.msghash != 0);
         require(preClaim.timestamp + preClaimPeriod <= block.timestamp);
+        require(preClaim.timestamp + 2*preClaimPeriod >= block.timestamp);
         return preClaim.msghash == keccak256(abi.encodePacked(_nonce, msg.sender, _lostAddress));
     }
 
