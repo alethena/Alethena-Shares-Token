@@ -103,7 +103,7 @@ contract AlethenaShares is ERC20, Claimable {
         emit Pause(_pause, _message, _newAddress, _fromBlock);
     }
 
-    event Pause(bool paused, string message, address newAddress, uint fromBlock);
+    event Pause(bool paused, string message, address newAddress, uint256 fromBlock);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /** 
