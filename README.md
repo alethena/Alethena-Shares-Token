@@ -69,6 +69,8 @@ There can only be one claim per address at a time. To prevent frontrunning, the 
 An attacker obtains no advantage from copying preClaims made by others because he cannot send from their account (and this information is part of the hashed package), i.e. the attacker would only know what preClaim to make once the lost address has been revealed (at which point he would have to wait the preClaim period while the true owners `declareLost` call goes through). 
 A preclaim is valid only for a relatively short time. This makes it impractical to constantly make preclaims on all addresses, furthermore, systematically abusing the functionality opens an attacker up to high potential losses. 
 
+The contract contains a link (in the variable `termsAndConditions`) to the relevant legal documentation for the token share.
+
 **Significance of events:**
 1. Transfer events are picked up by the share holder register tool. The business logic behind this is explained in the share token terms (section 6.6). 
 In a nutshell, a one-to-one mapping from addresses to shares is maintained using a 'first in, first out' logic. Let's consider an example:
