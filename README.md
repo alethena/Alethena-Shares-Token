@@ -81,7 +81,7 @@ Assume now that first A, and then B transfer their token to an address C. C now 
 Assume that E now registers as a shareholder, but not F.
 Block, transaction index and log index provide a strict ordering of transactions which is immutable. In this sense, let us assume that the transfer to E happened before the transfer to F.
 The result is that the shareholder rights for all 5 shares of A are transferred to E, shareholder rights for one share is transferred from B to F, but B retains shareholder rights for his shares 2-5.
-2. Mint events are similarly picked up by the share holder register tool.
+2. Mint events are similarly picked up by the shareholder register tool.
 3. Claim and preclaim events allow users to track claims made.
 
 -----------------------------------------------------------------------------------------------

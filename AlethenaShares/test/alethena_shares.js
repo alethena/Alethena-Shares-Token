@@ -51,8 +51,8 @@ contract('AlethenaShares', (accounts) => {
     const totalShares = await AlethenaSharesInstance.totalShares();
     const totalSupply = await AlethenaSharesInstance.totalSupply();
 
-    assert.equal(name, 'Alethena Shares', 'Name incorrect');
-    assert.equal(symbol, 'ATH', 'Symbol incorrect');
+    assert.equal(name, 'Alethena Equity', 'Name incorrect');
+    assert.equal(symbol, 'ALEQ', 'Symbol incorrect');
     assert.equal(decimals, 0, 'Decimals incorrect');
     assert.equal(totalShares, totalSharesInit, 'No. of total shares incorrect');
     assert.equal(totalSupply, 0, 'Total supply is incorrect');
@@ -623,6 +623,37 @@ it('unpause the contract', async () => {
   assert.equal(tx11.logs[0].args.message,unpauseMessage);
   assert.equal(tx11.logs[0].args.newAddress,'0x0000000000000000000000000000000000000000');
   assert.equal(tx11.logs[0].args.fromBlock,0);
+});
+
+it('should let OtherAddress3 make a preclaim again on Shareholder3', async () => {
+  console.log("Case 4: A claim is made but cleared by owner of claimed address".green);
+
+  // COMPUTE HASHED PACKAGE
+  const nonce = web3utils.sha3('Even better nonce 3');
+  const package = web3utils.soliditySha3(nonce,OtherAddress3,Shareholder3);
+  const tx3 = await AlethenaSharesInstance.prepareClaim(web3utils.toHex(package),{from: OtherAddress3});
+  let blockstamp = web3.eth.getBlock('latest').timestamp;
+  
+  //Check that data in struct is correct
+  assert.equal(package,await AlethenaSharesInstance.getMsgHash(OtherAddress3));
+  let temp = await AlethenaSharesInstance.getPreClaimTimeStamp(OtherAddress3);
+  assert.equal(blockstamp,temp.toString()); 
+
+  //Test events
+  assert.equal(OtherAddress3, tx3.logs[0].args._claimer, 'PreClaim address is incorrect');
+ 
+});
+
+it('Increase time', async () => {
+  const timeIncrease = 60*60*24+5; //48 hours, s, m, h, d
+  await helpers.increaseTime(timeIncrease);
+});
+
+it('should revert if preclaim is too old', async () => {
+  const nonce = web3utils.sha3('Even better nonce 3');
+  ShareHolder3Balance = await AlethenaSharesInstance.balanceOf(Shareholder3);
+  Collateral3 = ShareHolder3Balance*10**18;
+  await helpers.shouldRevert(AlethenaSharesInstance.declareLost(Shareholder3, nonce,{from: OtherAddress3, value: Collateral3}));
 });
 
 
