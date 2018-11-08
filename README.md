@@ -14,7 +14,7 @@ Instead, when someone has lost a private key, they can use the `declareLost` fun
 
 **Structure**
 
-The main contract is `AlethenaShares.sol`, it is based on a standard ERC20 token (`ERC20.sol`, `ERC20Basic.sol`) and `SafeMath.sol` is used to protect against overflow in arithmetic operations. 
+The main contract is `AlethenaShares.sol`, it is based on a standard ERC20 token (`ERC20.sol`, `ERC20Basic.sol`) and `SafeMath.sol` is used to protect against overflow in arithmetic operations 
 Ownership management is handled by `Ownable.sol`, with three types of users:
 - Standard users can use all the standard ERC20 functionality and make claims as outlined below
 - The `owner` can additionally change the total number of shares, mint, unmint and tokens, delete claims and pause the contract. 
@@ -25,7 +25,7 @@ All significant changes (relating to the share recovery) are contained in **`Cla
 **The main functionality  of `claimable.sol`**
 Let us consider an example:
 
-Assume that Alice lost the key to her address A which she was using to hold ATH shares.
+Assume that Alice lost the key to her address A which she was using to hold ALEQ shares.
 To recover the shares, she can do the following:
 
 1. From an address B, she calls the `prepareClaim` function and submits a package consisting of the hash of the string concatenation of 
