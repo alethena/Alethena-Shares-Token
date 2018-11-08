@@ -37,7 +37,7 @@ The hashed package (along with a timestamp) gets stored as a struct in a mapping
 
 2. After waiting sufficiently long (as defined by the `preClaimPeriod`), Alice will call the `declareLost` function from address B with the following arguments:
 - `address A`
-- the `nonce` used in step 1
+- the `nonce` used in step 1 <br>
 Furthermore, in this function call she needs to send a sufficient amount of ether to be used as collateral (as defined by the `collateralRate`).
 
 For the claim to be valid the following conditions need to be fulfilled:
