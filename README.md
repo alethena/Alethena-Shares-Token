@@ -2,7 +2,7 @@
 
 **Abstract**
 
-This is the smart contract code for the Alethena shares contract, an ERC20 token intended to make shares tradeable on the blockchain.
+This is the smart contract code for the Alethena shares contract, an ERC20 token intended to make shares (Namensaktien) tradeable on the blockchain.
 It is based on the open-zeppelin library with the key difference that tokens on lost addresses can be recovered.
 If you are interested, contact us at contact@alethena.com or get into contact with one of our team members.
 
