@@ -2,7 +2,7 @@
 
 **Abstract**
 
-This is the smart contract code for the Alethena shares contract, an ERC20 token intended to make shares (Namensaktien) tradeable on the blockchain.
+This is the smart contract code for the Alethena Shares contract, an ERC20 token intended to make shares (Namensaktien) tradeable on the blockchain.
 It is based on the open-zeppelin library with the additional feature that tokens on lost addresses can be recovered.
 If you are interested, contact us at contact@alethena.com or get into contact with one of our team members.
 The legal counterpart to this readme (the 'Share Token Terms') can be found under **shares.alethena.com**.
@@ -76,13 +76,13 @@ As the token is an actual share the number of **decimals** is 0, i.e. shares are
 
 **Warning: Contracts holding Alethena Share Tokens:**
 Please be aware that the Alethena Share Token contract does not distinguish between user addresses and contract addresses.
-This means that in principle anyone can declare tokens held by a contract to be lost. To be safe, **any** the following steps can be taken:
+This means that in principle anyone can declare tokens held by a contract to be lost. To be safe, **any** of the following steps can be taken:
 1. Make sure that the `clearClaim` function can be called from the contract address.
 2. Make sure the contract can transfer tokens (any token transfer from the claimed address kills any claims made).
 3. Register the address as a shareholder. This way, Alethena knows who you are and could delete any claims made.
 
 **A note on the use of timestamps**
-The Alethena Share Token Contract uses blocktimestamps. It is well known that timestamps can be manipulated to some degree by miners.
+The Alethena Share Token contract uses block timestamps. It is well known that timestamps can be manipulated to some degree by miners.
 Users should be aware of this, however to break the business logic of the contract on a conceptual level, large manipulations (hours and more) would be necessary.
 
 **Significance of events:**
