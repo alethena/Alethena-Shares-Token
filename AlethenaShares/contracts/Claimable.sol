@@ -1,5 +1,6 @@
 pragma solidity ^0.4.24;
 
+import "./SafeMath.sol";
 import "./Ownable.sol";
 import "./ERC20Basic.sol";
 
@@ -20,6 +21,8 @@ import "./ERC20Basic.sol";
  */
 contract Claimable is ERC20Basic, Ownable {
 
+    using SafeMath for uint256;
+
     struct Claim {
         address claimant; // the person who created the claim
         uint256 collateral; // the amount of wei deposited
@@ -32,7 +35,7 @@ contract Claimable is ERC20Basic, Ownable {
     }
 
     /** @param collateralRate Sets the collateral needed per share to file a claim */
-    uint256 public collateralRate = 1 ether;
+    uint256 public collateralRate = 5*10**15 wei;
 
     uint256 public claimPeriod = 60*60*24*30; // In seconds ;
     uint256 public preClaimPeriod = 60*60*24; // In seconds ;
@@ -41,11 +44,11 @@ contract Claimable is ERC20Basic, Ownable {
     mapping(address => PreClaim) public preClaims; // there can be at most one preclaim per address, here address is claimer
 
 
-    function setClaimParameters(uint256 _collateralRate, uint256 _claimPeriodInDays) public onlyOwner() {
+    function setClaimParameters(uint256 _collateralRateInWei, uint256 _claimPeriodInDays) public onlyOwner() {
         uint256 claimPeriodInSeconds = _claimPeriodInDays*60*60*24;
-        require(_collateralRate > 0);
-        require(_claimPeriodInDays > 30); // must be at least 30 days
-        collateralRate = _collateralRate;
+        require(_collateralRateInWei > 0);
+        require(_claimPeriodInDays > 90); // must be at least 90 days
+        collateralRate = _collateralRateInWei;
         claimPeriod = claimPeriodInSeconds;
         emit ClaimParametersChanged(collateralRate, claimPeriod);
     }
@@ -61,19 +64,18 @@ contract Claimable is ERC20Basic, Ownable {
   /** Anyone can declare that the private key to a certain address was lost by calling declareLost
     * providing a deposit/collateral. There are three possibilities of what can happen with the claim:
     * 1) The claim period expires and the claimant can get the deposit and the shares back by calling resolveClaim
-    * 2) The "lost" private key is used at any time to call resolveClaim. In that case, the claim is deleted and
+    * 2) The "lost" private key is used at any time to call clearClaim. In that case, the claim is deleted and
     *    the deposit sent to the shareholder (the owner of the private key). It is recommended to call resolveClaim
     *    whenever someone transfers funds to let claims be resolved automatically when the "lost" private key is
     *    used again.
-    * 3) The owner deletes the claim and assigns the deposit to himself. This is intended to be used to resolve
-    *    disputes. Who is entitled to keep the deposit depends on the contractual agreements between the involved
-    *    parties and in particular the issuance terms. Generally, using this function implies that you have to trust
-    *    the issuer of the tokens to handle the situation well. As a rule of thumb, the contract owner should assume
-    *    the owner of the lost address to be the rightful owner of the deposit. 
+    * 3) The owner deletes the claim and assigns the deposit to the claimant. This is intended to be used to resolve
+    *    disputes. Generally, using this function implies that you have to trust the issuer of the tokens to handle 
+    *    the situation well. As a rule of thumb, the contract owner should assume the owner of the lost address to be the
+    *    rightful owner of the deposit. 
     * It is highly recommended that the owner observes the claims made and informs the owners of the claimed addresses
     * whenever a claim is made for their address (this of course is only possible if they are known to the owner, e.g.
     * through a shareholder register).
-    * To prevent frontrunning attacks, a claim can only be made if the information revealed when calling "claimLost" 
+    * To prevent frontrunning attacks, a claim can only be made if the information revealed when calling "declareLost" 
     * was previously commited using the "prepareClaim" function. 
     */
 
@@ -96,7 +98,7 @@ contract Claimable is ERC20Basic, Ownable {
     function declareLost(address _lostAddress, bytes32 _nonce) public payable{
         uint256 balance = balanceOf(_lostAddress);
         require(balance > 0);
-        require(msg.value >= balance*collateralRate);
+        require(msg.value >= balance.mul(collateralRate));
         require(claims[_lostAddress].collateral == 0);
         require(validateClaim(_lostAddress, _nonce));
 
@@ -130,7 +132,7 @@ contract Claimable is ERC20Basic, Ownable {
     }
 
     /**
-     * Clears a claim after the key has been found again and assigns the collateral to the "lost" address.
+     * @dev Clears a claim after the key has been found again and assigns the collateral to the "lost" address.
      */
     function clearClaim() public returns (uint256){
         uint256 collateral = claims[msg.sender].collateral;
@@ -146,9 +148,7 @@ contract Claimable is ERC20Basic, Ownable {
     
    /** 
     * @dev This function is used to resolve a claim.
-    * @dev A rightful owner can claim his address back.
-    * @dev Else, after waiting period address can be claimed.
-    * 
+    * @dev After waiting period, the tokens on the lost address and collateral can be transferred.
    */
     function resolveClaim(address _lostAddress) public returns (uint256){
         Claim memory claim = claims[_lostAddress];

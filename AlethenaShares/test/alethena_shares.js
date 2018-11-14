@@ -494,7 +494,8 @@ it('should not let anyone other than the owner of the contract unmint', async ()
 it('should let the contract owner set the claim parameters', async () => {
   console.log("Testing the setters for all parameters".green);
   const newCollateralRate = 5*10**18;
-  const tx7 = await AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Owner});
+  const newClaimPeriod = 100;
+  const tx7 = await AlethenaSharesInstance.setClaimParameters(newCollateralRate, newClaimPeriod, {from: Owner});
 
   //Make sure change happened
   assert.equal(await AlethenaSharesInstance.collateralRate(),newCollateralRate);
@@ -504,13 +505,15 @@ it('should let the contract owner set the claim parameters', async () => {
 
 it('should not let anyone other than the owner set claim parameters', async () => {
   const newCollateralRate = 5*10**18;
-  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 50, {from: Shareholder1}));
+  const newClaimPeriod = 100;
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, newClaimPeriod, {from: Shareholder1}));
 });
 
 it('should revert when claim parameters to be set are out of range', async () => {
   const newCollateralRate = 5*10**18;
-  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 20, {from: Owner}));
-  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(0, 50, {from: Owner}));
+  const newClaimPeriod = 100;
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(newCollateralRate, 40, {from: Owner}));
+  await helpers.shouldRevert(AlethenaSharesInstance.setClaimParameters(0, newClaimPeriod, {from: Owner}));
 });
 
 it('should let the contract owner set the number of shares', async () => {

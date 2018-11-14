@@ -43,9 +43,9 @@ contract AlethenaShares is ERC20, Claimable {
 
     mapping(address => uint256) balances;
     uint256 totalSupply_;        // total number of tokenized shares, sum of all balances
-    uint256 totalShares_ = 1000; // total number of outstanding shares, maybe not all tokenized
+    uint256 totalShares_ = 1410000; // total number of outstanding shares, maybe not all tokenized
 
-    event Mint(address shareholder, uint256 amount, string message);
+    event Mint(address indexed shareholder, uint256 amount, string message);
     event Unmint(uint256 amount, string message);
 
   /** @dev Total number of tokens in existence */
@@ -68,7 +68,7 @@ contract AlethenaShares is ERC20, Claimable {
   /** Increases the number of the tokenized shares. If the shares are newly issued, the share total also needs to be increased. */
     function mint(address shareholder, uint256 _amount, string _message) public onlyOwner() {
         require(_amount > 0);
-        require(totalSupply_ + _amount <= totalShares_);
+        require(totalSupply_.add(_amount) <= totalShares_);
         balances[shareholder] = balances[shareholder].add(_amount);
         totalSupply_ = totalSupply_ + _amount;
         emit Mint(shareholder, _amount, _message);
@@ -150,7 +150,6 @@ Main change: Transfer functions have an additional post function which resolves 
    * @param _value uint256 the amount of tokens to be transferred
    */
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
-        require(!isPaused);
         require(_value <= allowed[_from][msg.sender]);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
         internalTransfer(_from, _to, _value);
