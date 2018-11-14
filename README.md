@@ -5,6 +5,7 @@
 This is the smart contract code for the Alethena shares contract, an ERC20 token intended to make shares (Namensaktien) tradeable on the blockchain.
 It is based on the open-zeppelin library with the additional feature that tokens on lost addresses can be recovered.
 If you are interested, contact us at contact@alethena.com or get into contact with one of our team members.
+The legal counterpart to this readme (the 'Share Token Terms') can be found under **shares.alethena.com**.
 
 **Concept**
 
@@ -56,7 +57,7 @@ Before this happens, the following conditions are checked:
 This will transfer the tokens from address A to address B and return the ether collateral back to Alice. The claim is deleted, the lost address, claimant and collateral are emitted in an event.
 
 **Additional functionality of Claimable.sol**
-1. The **owner can set the `collateralRate` and `claimPeriod`**, which are to be entered in wei and days respectively. The `collateralRate` must be strictly greater than zero and the `claimPeriod` cannot be shorter than 30 days. After changing the claim parameters an event is emitted.
+1. The **owner can set the `collateralRate` and `claimPeriod`**, which are to be entered in wei and days respectively. The `collateralRate` must be strictly greater than zero and the `claimPeriod` cannot be shorter than 90 days. After changing the claim parameters an event is emitted.
 2. If a **key is found again** (or a malicious claim is made), the **`clearClaim`** function can be called (with no arguments) from the claimed address. If there is a claim with non-zero collateral on that account, the claim will be deleted, and the collateral transferred to the previously claimed address. 
 **Important:** If a transfer is made from an account that is being claimed, this implies that the key is not lost. Consequently, the `clearClaim` function is automatically called, this is implemented in the `transfer` function of `AlthenaShares.sol`.
 3. The **`totalShares`** variable represents the number of all shares from this shareclass. There may be a situation where not all shares are actually tokenised. The number of tokenised shares is tracked by the **`totalSupply`** variable which is adjusted dynamically and cannot exceed `totalShares`. Similarly, when the `totalShares` variable is changed by the owner using `setTotalShares` it must be at least `totalSupply`.
@@ -72,6 +73,17 @@ A preclaim is valid only for a relatively short time. This makes it impractical 
 The contract contains a link (in the variable **`termsAndConditions`**) to the relevant legal documentation for the token share.
 
 As the token is an actual share the number of **decimals** is 0, i.e. shares are not divisible.
+
+**Warning: Contracts holding Alethena Share Tokens:**
+Please be aware that the Alethena Share Token contract does not distinguish between user addresses and contract addresses.
+This means that in principle anyone can declare tokens held by a contract to be lost. To be safe, **any** the following steps can be taken:
+1. Make sure that the `clearClaim` function can be called from the contract address.
+2. Make sure the contract can transfer tokens (any token transfer from the claimed address kills any claims made).
+3. Register the address as a shareholder. This way, Alethena knows who you are and could delete any claims made.
+
+**A note on the use of timestamps**
+The Alethena Share Token Contract uses blocktimestamps. It is well known that timestamps can be manipulated to some degree by miners.
+Users should be aware of this, however to break the business logic of the contract on a conceptual level, large manipulations (hours and more) would be necessary.
 
 **Significance of events:**
 1. Transfer events are picked up by the shareholder register tool. The business logic behind this is explained in the share token terms (section 6.6). 
