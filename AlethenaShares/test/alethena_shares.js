@@ -17,11 +17,8 @@ contract('AlethenaShares', (accounts) => {
   const OtherAddress1     = accounts[7]; // Used by Shareholder 1 to get back token
   const OtherAddress2     = accounts[8]; // Used to attack Shareholder2
   const OtherAddress3     = accounts[9]; // Used to attack Shareholder3
-  const Master            = "0x0e0a1a8daa228def4a4a8613b3e40aaf435d319e";
+  const Master            = "0x8fed3492db590ad34ed42b0f509eb3c9626246fc";
   
-  // For obvious reasons the following key will not be disclosed in the production version ;-P
-  const MasterKey         = "0x60D983AA17D2F806FE7EAC51444DCAF033756E1EF8D2E58303323C44AF9DA876";
-
   //const MasterAccount = Accounts.privateKeyToAccount(MasterKey);
 
 
@@ -31,7 +28,7 @@ contract('AlethenaShares', (accounts) => {
   const mintShareholder2 = 20;
   const mintShareholder3 = 30;
   const totalMinted      = 160;
-  const totalSharesInit  = 1000;
+  const totalSharesInit  = 1397188;
 
   // Have to hardcode this as testrpc and truffle somehow don't work nicely together on this :-() 
   const gasPrice = 100000000000;

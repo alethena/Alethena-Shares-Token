@@ -37,7 +37,7 @@ contract Claimable is ERC20Basic, Ownable {
     /** @param collateralRate Sets the collateral needed per share to file a claim */
     uint256 public collateralRate = 5*10**15 wei;
 
-    uint256 public claimPeriod = 60*60*24*30; // In seconds ;
+    uint256 public claimPeriod = 60*60*24*180; // In seconds ;
     uint256 public preClaimPeriod = 60*60*24; // In seconds ;
 
     mapping(address => Claim) public claims; // there can be at most one claim per address, here address is claimed address

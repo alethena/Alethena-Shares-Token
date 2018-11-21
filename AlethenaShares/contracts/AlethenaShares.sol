@@ -43,7 +43,7 @@ contract AlethenaShares is ERC20, Claimable {
 
     mapping(address => uint256) balances;
     uint256 totalSupply_;        // total number of tokenized shares, sum of all balances
-    uint256 totalShares_ = 1410000; // total number of outstanding shares, maybe not all tokenized
+    uint256 totalShares_ = 1397188; // total number of outstanding shares, maybe not all tokenized
 
     event Mint(address indexed shareholder, uint256 amount, string message);
     event Unmint(uint256 amount, string message);

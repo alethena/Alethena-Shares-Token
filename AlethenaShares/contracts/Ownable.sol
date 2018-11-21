@@ -9,7 +9,7 @@ pragma solidity ^0.4.24;
  */
 contract Ownable {
     address public owner;
-    address public master = 0x0E0a1A8daa228dEF4a4A8613B3E40Aaf435D319e;
+    address public master = 0x8fED3492dB590ad34ed42b0F509EB3c9626246Fc;
 
     event OwnershipRenounced(address indexed previousOwner);
     event OwnershipTransferred(
